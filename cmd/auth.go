@@ -19,7 +19,7 @@ func AuthCommand() *ffcli.Command {
 		Name:       "auth",
 		ShortUsage: "asc auth <subcommand> [flags]",
 		ShortHelp:  "Manage App Store Connect API authentication.",
-		LongHelp:   "Manage App Store Connect API authentication.\n\nAuthentication is handled via App Store Connect API keys. Generate keys at:\nhttps://appstoreconnect.apple.com/access/api\n\nCredentials are stored in the system keychain when available, with a local config fallback.\n\nSubcommands:\n  login     Register and store API key\n  logout    Remove stored credentials\n  status    Show current authentication status",
+		LongHelp:   "Manage App Store Connect API authentication.\n\nAuthentication is handled via App Store Connect API keys. Generate keys at:\nhttps://appstoreconnect.apple.com/access/integrations/api\n\nCredentials are stored in the system keychain when available, with a local config fallback.\n\nSubcommands:\n  login     Register and store API key\n  logout    Remove stored credentials\n  status    Show current authentication status",
 		FlagSet:    fs,
 		Subcommands: []*ffcli.Command{
 			AuthLoginCommand(),

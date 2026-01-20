@@ -88,3 +88,28 @@ func TestPrintMarkdown_Reviews(t *testing.T) {
 		t.Fatalf("expected title in output, got: %s", output)
 	}
 }
+
+func TestPrintPrettyJSON(t *testing.T) {
+	resp := &ReviewsResponse{
+		Data: []Resource[ReviewAttributes]{
+			{
+				ID: "1",
+				Attributes: ReviewAttributes{
+					CreatedDate: "2026-01-20T00:00:00Z",
+					Rating:      5,
+					Title:       "Great app",
+					Body:        "Nice work",
+					Territory:   "US",
+				},
+			},
+		},
+	}
+
+	output := captureStdout(t, func() error {
+		return PrintPrettyJSON(resp)
+	})
+
+	if !strings.Contains(output, "\n  \"data\"") {
+		t.Fatalf("expected pretty JSON indentation, got: %s", output)
+	}
+}

@@ -10,7 +10,7 @@ A fast, AI-agent-friendly CLI for App Store Connect that enables developers to s
 
 ---
 
-## Current Reality (v0.1 - Implemented, Needs Validation)
+## Current Reality (v0.1 - Implemented, Validated Locally)
 
 **Last Updated:** 2026-01-20
 
@@ -22,6 +22,7 @@ A fast, AI-agent-friendly CLI for App Store Connect that enables developers to s
 - ECDSA JWT signing wired to `.p8` keys
 - Feedback/crash/review endpoints aligned to ASC OpenAPI spec
 - Code compiles and unit tests run
+- Live API validation: feedback/crashes return data; reviews may be empty if no reviews exist
 
 ### What Doesn't Work Yet
 
@@ -114,7 +115,7 @@ asc reviews --app "123456789" --json
 
 #### What Needs Fixing
 
-- [ ] Test actual API authentication with App Store Connect
+- [x] Test actual API authentication with App Store Connect
 - [ ] Add pagination support
 - [ ] Add integration tests for auth flow
 
@@ -408,9 +409,9 @@ github.com/goreleaser/nfpm/v2     - Packaging via `go run` (optional)
 
 ## Current Status
 
-**Phase 1: Foundation - IMPLEMENTED** (needs live verification)
+**Phase 1: Foundation - IMPLEMENTED** (validated locally)
 
-Next: Validate with real App Store Connect credentials
+Next: Add pagination, feedback/crash filters, and integration tests
 
 ## Known Issues
 
@@ -428,11 +429,11 @@ Next: Validate with real App Store Connect credentials
 
 ## Success Criteria for v0.1
 
-- [ ] `asc feedback --app "APP_ID" --json` returns screenshot feedback submissions
-- [ ] Feedback includes: id, createdDate, email, comment
-- [ ] `asc crashes --app "APP_ID" --json` returns crash submissions
-- [ ] Crashes include: id, createdDate, email, crash metadata
-- [ ] `asc reviews --app "APP_ID" --json` returns customer reviews
-- [ ] Reviews include: id, createdDate, rating, title, body, territory
-- [ ] All commands work with real App Store Connect API keys
+- [x] `asc feedback --app "APP_ID" --json` returns screenshot feedback submissions
+- [x] Feedback includes: id, createdDate, email, comment
+- [x] `asc crashes --app "APP_ID" --json` returns crash submissions
+- [x] Crashes include: id, createdDate, email, crash metadata
+- [x] `asc reviews --app "APP_ID" --json` returns customer reviews (may be empty)
+- [x] Reviews include: id, createdDate, rating, title, body, territory
+- [x] All commands work with real App Store Connect API keys
 - [ ] Basic integration test that doesn't require real API credentials

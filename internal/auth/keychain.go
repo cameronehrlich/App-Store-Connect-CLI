@@ -43,8 +43,11 @@ type credentialPayload struct {
 
 var keyringOpener = func() (keyring.Keyring, error) {
 	return keyring.Open(keyring.Config{
-		ServiceName:  keyringService,
-		KeychainName: keyringService,
+		ServiceName:                    keyringService,
+		KeychainName:                   keyringService,
+		KeychainTrustApplication:       true,
+		KeychainSynchronizable:         false,
+		KeychainAccessibleWhenUnlocked: true,
 		AllowedBackends: []keyring.BackendType{
 			keyring.KeychainBackend,
 			keyring.WinCredBackend,

@@ -279,8 +279,14 @@ type Links struct {
 	Prev string `json:"prev,omitempty"`
 }
 
-// PrintJSON prints data as JSON
+// PrintJSON prints data as minified JSON (best for AI agents)
 func PrintJSON(data interface{}) error {
+	enc := json.NewEncoder(os.Stdout)
+	return enc.Encode(data)
+}
+
+// PrintPrettyJSON prints data as indented JSON (best for debugging).
+func PrintPrettyJSON(data interface{}) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(data)

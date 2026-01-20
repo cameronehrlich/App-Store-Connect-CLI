@@ -20,6 +20,7 @@ func FeedbackCommand() *ffcli.Command {
 	appID := fs.String("app", "", "App Store Connect app ID (or ASC_APP_ID env)")
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	jsonFlag := fs.Bool("json", false, "Output in JSON format (shorthand)")
+	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
 
 	return &ffcli.Command{
 		Name:       "feedback",
@@ -62,7 +63,7 @@ Examples:
 				format = "json"
 			}
 
-			return printOutput(feedback, format)
+			return printOutput(feedback, format, *pretty)
 		},
 	}
 }
@@ -74,6 +75,7 @@ func CrashesCommand() *ffcli.Command {
 	appID := fs.String("app", "", "App Store Connect app ID (or ASC_APP_ID env)")
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	jsonFlag := fs.Bool("json", false, "Output in JSON format (shorthand)")
+	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
 
 	return &ffcli.Command{
 		Name:       "crashes",
@@ -118,7 +120,7 @@ Examples:
 				format = "json"
 			}
 
-			return printOutput(crashes, format)
+			return printOutput(crashes, format, *pretty)
 		},
 	}
 }
@@ -130,6 +132,7 @@ func ReviewsCommand() *ffcli.Command {
 	appID := fs.String("app", "", "App Store Connect app ID (or ASC_APP_ID env)")
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	jsonFlag := fs.Bool("json", false, "Output in JSON format (shorthand)")
+	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
 	stars := fs.Int("stars", 0, "Filter by star rating (1-5)")
 	territory := fs.String("territory", "", "Filter by territory (e.g., US, GBR)")
 
@@ -187,7 +190,7 @@ Examples:
 				format = "json"
 			}
 
-			return printOutput(reviews, format)
+			return printOutput(reviews, format, *pretty)
 		},
 	}
 }
@@ -254,14 +257,23 @@ func getASCClient() (*asc.Client, error) {
 	return asc.NewClient(actualKeyID, actualIssuerID, actualKeyPath)
 }
 
-func printOutput(data interface{}, format string) error {
+func printOutput(data interface{}, format string, pretty bool) error {
 	format = strings.ToLower(format)
 	switch format {
 	case "json":
+		if pretty {
+			return asc.PrintPrettyJSON(data)
+		}
 		return asc.PrintJSON(data)
 	case "markdown", "md":
+		if pretty {
+			return fmt.Errorf("--pretty is only valid with JSON output")
+		}
 		return asc.PrintMarkdown(data)
 	case "table":
+		if pretty {
+			return fmt.Errorf("--pretty is only valid with JSON output")
+		}
 		return asc.PrintTable(data)
 	default:
 		return fmt.Errorf("unsupported format: %s", format)

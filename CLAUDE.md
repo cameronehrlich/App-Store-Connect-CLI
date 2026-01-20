@@ -55,23 +55,39 @@ Always use long-form flags with clear names:
 
 ### JSON-First Output
 
-All commands support `--json` for easy parsing by AI agents.
+All commands support `--json` for easy parsing by AI agents. JSON output is **minified** (one line) to minimize token usage.
+
+Output formats:
+| Format | Flag | Use Case |
+|--------|------|----------|
+| JSON (minified) | `--json` | AI agents, scripting |
+| Table | `--output table` | Humans in terminal |
+| Markdown | `--output markdown` | Humans, documentation |
 
 ## Commands
 
 ### Core Commands (v1)
 
 ```bash
-# TestFlight
+# TestFlight - JSON for AI agents
 asc feedback --app "123456789" --json
 asc crashes --app "123456789" --json
 
-# App Store
-asc reviews --app "123456789" --stars 1 --territory US --json
+# TestFlight - Table for humans
+asc feedback --app "123456789" --output table
+
+# TestFlight - Markdown for docs
+asc crashes --app "123456789" --output markdown
+
+# App Store - JSON for AI agents
+asc reviews --app "123456789" --json
+
+# App Store - Table for humans
+asc reviews --app "123456789" --stars 1 --output table
 
 # Authentication
 asc auth login --name "MyKey" --key-id "ABC" --issuer-id "DEF" --private-key /path/to/key.p8
-asc auth logout
+asc auth status
 ```
 
 ### Future Commands (v2+)
@@ -85,7 +101,7 @@ asc auth logout
 ## Authentication
 
 Uses App Store Connect API keys (not Apple ID). Keys are:
-1. Generated at https://appstoreconnect.apple.com/access/api
+1. Generated at https://appstoreconnect.apple.com/access/integrations/api
 2. Stored in the system keychain (with local config fallback)
 3. Never committed to version control
 

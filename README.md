@@ -42,7 +42,7 @@ asc auth login \
   --private-key /path/to/AuthKey.p8
 ```
 
-Generate API keys at: https://appstoreconnect.apple.com/access/api
+Generate API keys at: https://appstoreconnect.apple.com/access/integrations/api
 
 Credentials are stored in the system keychain when available, with a local config fallback
 at `~/.asc/config.json` (restricted permissions).
@@ -56,22 +56,36 @@ Environment variable fallback:
 ### TestFlight
 
 ```bash
-# List beta feedback screenshot submissions
+# List beta feedback (JSON - best for AI agents)
 asc feedback --app "123456789" --json
 
-# Get crash reports
-asc crashes --app "123456789" --json
+# Get crash reports (table format - for humans)
+asc crashes --app "123456789" --output table
+
+# Get crash reports (markdown - for docs)
+asc crashes --app "123456789" --output markdown
 ```
 
 ### App Store
 
 ```bash
-# List customer reviews
-asc reviews --app "123456789" --stars 1 --json
+# List customer reviews (JSON - best for AI agents)
+asc reviews --app "123456789" --json
 
-# Filter by territory
-asc reviews --app "123456789" --territory US
+# Filter by stars (table format - for humans)
+asc reviews --app "123456789" --stars 1 --output table
+
+# Filter by territory (markdown - for docs)
+asc reviews --app "123456789" --territory US --output markdown
 ```
+
+### Output Formats
+
+| Format | Flag | Use Case |
+|--------|------|----------|
+| JSON (minified) | `--json` | AI agents, scripting |
+| Table | `--output table` | Humans in terminal |
+| Markdown | `--output markdown` | Humans, documentation |
 
 ### Authentication
 
@@ -97,11 +111,13 @@ asc reviews --app "MyApp" --stars 1 --json
 
 ### AI-Agent Friendly
 
-All commands support JSON output for easy parsing:
+All commands output minified JSON by default for easy parsing by AI agents:
 
 ```bash
 asc feedback --app "123456789" --json | jq '.data[].attributes.comment'
 ```
+
+The `--json` flag outputs minified JSON (one line per response) to minimize token usage. Use `--output table` or `--output markdown` for human-readable output.
 
 ### No Interactive Prompts
 
