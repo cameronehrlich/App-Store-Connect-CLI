@@ -23,16 +23,6 @@ A fast, AI-agent-friendly CLI for App Store Connect that enables developers to s
 
 ## Roadmap
 
-### Phase 3: App Management (v0.2)
-
-**Goal:** Add commands for managing apps and builds
-
-#### Technical Tasks
-
-- [ ] Add build expiration workflow
-
----
-
 ### Phase 3.5: Build Uploads + Submission (API 4.1+)
 
 **Goal:** Upload builds and submit them for review without Xcode/Transporter.
@@ -231,40 +221,6 @@ Use these to verify:
 
 ---
 
-### Phase 4: Beta Management (v0.3)
-
-**Goal:** Add commands for managing beta testers and groups
-
-#### Features
-
-1. **Beta Groups**
-   ```bash
-   asc beta-groups list --app "APP_ID"
-   asc beta-groups create --app "APP_ID" --name "Beta Testers"
-   ```
-
-2. **Beta Testers**
-   ```bash
-   asc beta-testers list --app "APP_ID"
-   asc beta-testers add --app "APP_ID" --email "tester@example.com" --group "Beta"
-   asc beta-testers remove --app "APP_ID" --email "tester@example.com"
-   ```
-
-3. **Tester Invitations**
-   ```bash
-   asc beta-testers invite --app "APP_ID" --email "tester@example.com"
-   ```
-
-#### Technical Tasks
-
-- [ ] Implement `GET /v1/apps/{id}/betaGroups`
-- [ ] Implement `POST /v1/betaGroups`
-- [ ] Implement `GET /v1/apps/{id}/betaTesters`
-- [ ] Implement `POST /v1/betaTesters`
-- [ ] Implement `DELETE /v1/betaTesters/{id}`
-
----
-
 ### Phase 5: Localization (v0.4)
 
 **Goal:** Add commands for managing app localizations
@@ -430,7 +386,7 @@ github.com/goreleaser/nfpm/v2     - Packaging via `go run` (optional)
 
 ## Current Status
 
-Next: Implement build uploads + submission flows (API 4.1+), then auto-pagination and beta management
+Next: Implement build uploads + submission flows (API 4.1+), then auto-pagination
 
 ## Known Issues
 
