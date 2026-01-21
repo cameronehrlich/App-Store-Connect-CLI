@@ -70,10 +70,14 @@ func GetRetryAfter(err error) time.Duration {
 }
 
 // RetryOptions configures retry behavior.
+//   - MaxRetries: Number of retry attempts. 0 = no retries (fail fast),
+//     negative = use DefaultMaxRetries.
+//   - BaseDelay: Initial delay between retries (with exponential backoff).
+//   - MaxDelay: Maximum delay cap for backoff.
 type RetryOptions struct {
-	MaxRetries int
-	BaseDelay  time.Duration
-	MaxDelay   time.Duration
+	MaxRetries int           // 0=disabled, negative=default, positive=retry count
+	BaseDelay  time.Duration // Initial delay for exponential backoff
+	MaxDelay   time.Duration // Maximum delay cap
 }
 
 // ResolveRetryOptions returns retry options, optionally overridden by env vars.

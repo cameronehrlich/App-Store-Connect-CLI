@@ -2,10 +2,13 @@ package asc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBuildReviewQuery(t *testing.T) {
@@ -626,5 +629,102 @@ func TestAppStoreVersionSubmissionCreateRequest_JSON(t *testing.T) {
 	}
 	if parsed.Data.Relationships.AppStoreVersion.Data.ID != "VERSION_ID_123" {
 		t.Fatalf("expected version id=VERSION_ID_123, got %q", parsed.Data.Relationships.AppStoreVersion.Data.ID)
+	}
+}
+
+func TestWithRetry_ZeroRetries(t *testing.T) {
+	callCount := 0
+	wantErr := fmt.Errorf("transient error")
+
+	_, err := WithRetry(context.Background(), func() (string, error) {
+		callCount++
+		return "", wantErr
+	}, RetryOptions{MaxRetries: 0})
+
+	// Should fail immediately without retries
+	if callCount != 1 {
+		t.Fatalf("expected 1 call (no retries), got %d", callCount)
+	}
+	if err != wantErr {
+		t.Fatalf("expected error %v, got %v", wantErr, err)
+	}
+}
+
+func TestWithRetry_NegativeRetriesUsesDefault(t *testing.T) {
+	callCount := 0
+
+	WithRetry(context.Background(), func() (string, error) {
+		callCount++
+		if callCount < DefaultMaxRetries+1 {
+			return "", &RetryableError{RetryAfter: time.Millisecond}
+		}
+		return "success", nil
+	}, RetryOptions{MaxRetries: -1})
+
+	// Should use default retries (3)
+	if callCount != DefaultMaxRetries+1 {
+		t.Fatalf("expected %d calls (default retries), got %d", DefaultMaxRetries+1, callCount)
+	}
+}
+
+func TestWithRetry_AttemptCountInErrorMessage(t *testing.T) {
+	const maxRetries = 2
+	callCount := 0
+
+	_, err := WithRetry(context.Background(), func() (string, error) {
+		callCount++
+		return "", &RetryableError{RetryAfter: time.Millisecond}
+	}, RetryOptions{MaxRetries: maxRetries})
+
+	// Should have exhausted all retries
+	if callCount != maxRetries+1 {
+		t.Fatalf("expected %d calls, got %d", maxRetries+1, callCount)
+	}
+
+	// Error message should report the correct number of retries
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	errMsg := err.Error()
+	// "after 2 retries" means we tried 3 times (initial + 2 retries)
+	if !strings.Contains(errMsg, "after 2 retries") {
+		t.Fatalf("error message should mention 'after 2 retries', got: %s", errMsg)
+	}
+}
+
+func TestWithRetry_NonRetryableErrorFailsFast(t *testing.T) {
+	callCount := 0
+	wantErr := fmt.Errorf("non-retryable error")
+
+	_, err := WithRetry(context.Background(), func() (string, error) {
+		callCount++
+		return "", wantErr
+	}, RetryOptions{MaxRetries: 3, BaseDelay: time.Millisecond})
+
+	// Should fail immediately without retries
+	if callCount != 1 {
+		t.Fatalf("expected 1 call (no retries for non-retryable error), got %d", callCount)
+	}
+	if err != wantErr {
+		t.Fatalf("expected error %v, got %v", wantErr, err)
+	}
+}
+
+func TestWithRetry_SuccessOnFirstTry(t *testing.T) {
+	callCount := 0
+
+	result, err := WithRetry(context.Background(), func() (string, error) {
+		callCount++
+		return "success", nil
+	}, RetryOptions{MaxRetries: 3})
+
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if result != "success" {
+		t.Fatalf("expected 'success', got %q", result)
+	}
+	if callCount != 1 {
+		t.Fatalf("expected 1 call, got %d", callCount)
 	}
 }
