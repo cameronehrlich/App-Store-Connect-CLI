@@ -570,6 +570,11 @@ type ResourceData struct {
 	ID   string       `json:"id"`
 }
 
+// RelationshipRequest represents a relationship update request payload.
+type RelationshipRequest struct {
+	Data []ResourceData `json:"data"`
+}
+
 // BuildUploadAttributes describes a build upload resource.
 type BuildUploadAttributes struct {
 	CFBundleShortVersionString string   `json:"cfBundleShortVersionString"`
@@ -938,6 +943,13 @@ type AppStoreVersionAttachBuildResult struct {
 	VersionID string `json:"versionId"`
 	BuildID   string `json:"buildId"`
 	Attached  bool   `json:"attached"`
+}
+
+// BuildBetaGroupsUpdateResult represents CLI output for build beta group updates.
+type BuildBetaGroupsUpdateResult struct {
+	BuildID  string   `json:"buildId"`
+	GroupIDs []string `json:"groupIds"`
+	Action   string   `json:"action"`
 }
 
 // BetaTesterInvitationResult represents CLI output for invitations.
@@ -2804,6 +2816,54 @@ func (c *Client) ExpireBuild(ctx context.Context, buildID string) (*BuildRespons
 	return &response, nil
 }
 
+// AddBetaGroupsToBuild adds beta groups to a build for TestFlight distribution.
+func (c *Client) AddBetaGroupsToBuild(ctx context.Context, buildID string, groupIDs []string) error {
+	payload := RelationshipRequest{
+		Data: make([]ResourceData, len(groupIDs)),
+	}
+	for i, id := range groupIDs {
+		payload.Data[i] = ResourceData{
+			Type: ResourceTypeBetaGroups,
+			ID:   id,
+		}
+	}
+
+	body, err := BuildRequestBody(payload)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/v1/builds/%s/relationships/betaGroups", buildID)
+	if _, err := c.do(ctx, "POST", path, body); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoveBetaGroupsFromBuild removes beta groups from a build.
+func (c *Client) RemoveBetaGroupsFromBuild(ctx context.Context, buildID string, groupIDs []string) error {
+	payload := RelationshipRequest{
+		Data: make([]ResourceData, len(groupIDs)),
+	}
+	for i, id := range groupIDs {
+		payload.Data[i] = ResourceData{
+			Type: ResourceTypeBetaGroups,
+			ID:   id,
+		}
+	}
+
+	body, err := BuildRequestBody(payload)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/v1/builds/%s/relationships/betaGroups", buildID)
+	if _, err := c.do(ctx, "DELETE", path, body); err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateBuildUpload creates a new build upload record.
 func (c *Client) CreateBuildUpload(ctx context.Context, req BuildUploadCreateRequest) (*BuildUploadResponse, error) {
 	body, err := BuildRequestBody(req)
@@ -3173,6 +3233,8 @@ func PrintMarkdown(data interface{}) error {
 		return printAppStoreVersionDetailMarkdown(v)
 	case *AppStoreVersionAttachBuildResult:
 		return printAppStoreVersionAttachBuildMarkdown(v)
+	case *BuildBetaGroupsUpdateResult:
+		return printBuildBetaGroupsUpdateMarkdown(v)
 	case *BetaTesterDeleteResult:
 		return printBetaTesterDeleteResultMarkdown(v)
 	case *BetaTesterGroupsUpdateResult:
@@ -3261,6 +3323,8 @@ func PrintTable(data interface{}) error {
 		return printAppStoreVersionDetailTable(v)
 	case *AppStoreVersionAttachBuildResult:
 		return printAppStoreVersionAttachBuildTable(v)
+	case *BuildBetaGroupsUpdateResult:
+		return printBuildBetaGroupsUpdateTable(v)
 	case *BetaTesterDeleteResult:
 		return printBetaTesterDeleteResultTable(v)
 	case *BetaTesterGroupsUpdateResult:
@@ -3851,6 +3915,17 @@ func printAppStoreVersionAttachBuildTable(result *AppStoreVersionAttachBuildResu
 	return w.Flush()
 }
 
+func printBuildBetaGroupsUpdateTable(result *BuildBetaGroupsUpdateResult) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "Build ID\tGroup IDs\tAction")
+	fmt.Fprintf(w, "%s\t%s\t%s\n",
+		result.BuildID,
+		strings.Join(result.GroupIDs, ", "),
+		result.Action,
+	)
+	return w.Flush()
+}
+
 func printBuildUploadResultMarkdown(result *BuildUploadResult) error {
 	fmt.Fprintln(os.Stdout, "| Upload ID | File ID | File Name | File Size |")
 	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- |")
@@ -3956,6 +4031,17 @@ func printAppStoreVersionAttachBuildMarkdown(result *AppStoreVersionAttachBuildR
 		escapeMarkdown(result.VersionID),
 		escapeMarkdown(result.BuildID),
 		result.Attached,
+	)
+	return nil
+}
+
+func printBuildBetaGroupsUpdateMarkdown(result *BuildBetaGroupsUpdateResult) error {
+	fmt.Fprintln(os.Stdout, "| Build ID | Group IDs | Action |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- |")
+	fmt.Fprintf(os.Stdout, "| %s | %s | %s |\n",
+		escapeMarkdown(result.BuildID),
+		escapeMarkdown(strings.Join(result.GroupIDs, ", ")),
+		escapeMarkdown(result.Action),
 	)
 	return nil
 }

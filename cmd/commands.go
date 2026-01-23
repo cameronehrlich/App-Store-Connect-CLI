@@ -674,7 +674,9 @@ Examples:
   asc builds list --app "123456789"
   asc builds info --build "BUILD_ID"
   asc builds expire --build "BUILD_ID"
-  asc builds upload --app "123456789" --ipa "app.ipa"`,
+  asc builds upload --app "123456789" --ipa "app.ipa"
+  asc builds add-groups --build "BUILD_ID" --group "GROUP_ID"
+  asc builds remove-groups --build "BUILD_ID" --group "GROUP_ID"`,
 		FlagSet:   fs,
 		UsageFunc: DefaultUsageFunc,
 		Subcommands: []*ffcli.Command{
@@ -682,6 +684,8 @@ Examples:
 			BuildsInfoCommand(),
 			BuildsExpireCommand(),
 			BuildsUploadCommand(),
+			BuildsAddGroupsCommand(),
+			BuildsRemoveGroupsCommand(),
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return flag.ErrHelp
@@ -997,6 +1001,10 @@ func contextWithTimeout(ctx context.Context) (context.Context, context.CancelFun
 		ctx = context.Background()
 	}
 	return context.WithTimeout(ctx, asc.ResolveTimeout())
+}
+
+func parseCommaSeparatedIDs(value string) []string {
+	return splitCSV(value)
 }
 
 func splitCSV(value string) []string {
