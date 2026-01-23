@@ -171,6 +171,59 @@ func TestBuildsExpireRequiresBuildID(t *testing.T) {
 	}
 }
 
+func TestBuildsGroupValidationErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "builds add-groups missing build",
+			args:    []string{"builds", "add-groups"},
+			wantErr: "Error: --build is required",
+		},
+		{
+			name:    "builds add-groups missing group",
+			args:    []string{"builds", "add-groups", "--build", "BUILD_123"},
+			wantErr: "Error: --group is required",
+		},
+		{
+			name:    "builds remove-groups missing build",
+			args:    []string{"builds", "remove-groups"},
+			wantErr: "Error: --build is required",
+		},
+		{
+			name:    "builds remove-groups missing group",
+			args:    []string{"builds", "remove-groups", "--build", "BUILD_123"},
+			wantErr: "Error: --group is required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				err := root.Run(context.Background())
+				if !errors.Is(err, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", err)
+				}
+			})
+
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if !strings.Contains(stderr, test.wantErr) {
+				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			}
+		})
+	}
+}
+
 func TestBetaManagementValidationErrors(t *testing.T) {
 	t.Setenv("ASC_APP_ID", "")
 

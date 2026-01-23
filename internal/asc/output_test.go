@@ -982,6 +982,44 @@ func TestPrintMarkdown_AppStoreVersionAttachBuildResult(t *testing.T) {
 	}
 }
 
+func TestPrintTable_BuildBetaGroupsUpdateResult(t *testing.T) {
+	resp := &BuildBetaGroupsUpdateResult{
+		BuildID:  "BUILD_123",
+		GroupIDs: []string{"GROUP_1", "GROUP_2"},
+		Action:   "added",
+	}
+
+	output := captureStdout(t, func() error {
+		return PrintTable(resp)
+	})
+
+	if !strings.Contains(output, "Group IDs") {
+		t.Fatalf("expected group IDs header, got: %s", output)
+	}
+	if !strings.Contains(output, "GROUP_1, GROUP_2") {
+		t.Fatalf("expected group IDs in output, got: %s", output)
+	}
+}
+
+func TestPrintMarkdown_BuildBetaGroupsUpdateResult(t *testing.T) {
+	resp := &BuildBetaGroupsUpdateResult{
+		BuildID:  "BUILD_123",
+		GroupIDs: []string{"GROUP_1", "GROUP_2"},
+		Action:   "removed",
+	}
+
+	output := captureStdout(t, func() error {
+		return PrintMarkdown(resp)
+	})
+
+	if !strings.Contains(output, "| Build ID | Group IDs | Action |") {
+		t.Fatalf("expected markdown header, got: %s", output)
+	}
+	if !strings.Contains(output, "GROUP_1, GROUP_2") {
+		t.Fatalf("expected group IDs in output, got: %s", output)
+	}
+}
+
 func TestPrintTable_SalesReportResult(t *testing.T) {
 	result := &SalesReportResult{
 		VendorNumber:  "12345678",

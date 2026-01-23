@@ -235,6 +235,70 @@ func TestAttachBuildToVersion(t *testing.T) {
 	}
 }
 
+func TestAddBetaGroupsToBuild_SendsRequest(t *testing.T) {
+	response := jsonResponse(http.StatusNoContent, ``)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/builds/build-1/relationships/betaGroups" {
+			t.Fatalf("expected path /v1/builds/build-1/relationships/betaGroups, got %s", req.URL.Path)
+		}
+		var payload RelationshipRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if len(payload.Data) != 2 {
+			t.Fatalf("expected 2 relationships, got %d", len(payload.Data))
+		}
+		if payload.Data[0].Type != ResourceTypeBetaGroups || payload.Data[0].ID != "group-1" {
+			t.Fatalf("unexpected relationship[0]: %+v", payload.Data[0])
+		}
+		if payload.Data[1].Type != ResourceTypeBetaGroups || payload.Data[1].ID != "group-2" {
+			t.Fatalf("unexpected relationship[1]: %+v", payload.Data[1])
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if err := client.AddBetaGroupsToBuild(context.Background(), "build-1", []string{"group-1", "group-2"}); err != nil {
+		t.Fatalf("AddBetaGroupsToBuild() error: %v", err)
+	}
+}
+
+func TestRemoveBetaGroupsFromBuild_SendsRequest(t *testing.T) {
+	response := jsonResponse(http.StatusNoContent, ``)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodDelete {
+			t.Fatalf("expected DELETE, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/builds/build-1/relationships/betaGroups" {
+			t.Fatalf("expected path /v1/builds/build-1/relationships/betaGroups, got %s", req.URL.Path)
+		}
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatalf("read body error: %v", err)
+		}
+		if len(body) == 0 {
+			t.Fatalf("expected request body for delete")
+		}
+		var payload RelationshipRequest
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode body error: %v", err)
+		}
+		if len(payload.Data) != 1 {
+			t.Fatalf("expected 1 relationship, got %d", len(payload.Data))
+		}
+		if payload.Data[0].Type != ResourceTypeBetaGroups || payload.Data[0].ID != "group-1" {
+			t.Fatalf("unexpected relationship: %+v", payload.Data[0])
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if err := client.RemoveBetaGroupsFromBuild(context.Background(), "build-1", []string{"group-1"}); err != nil {
+		t.Fatalf("RemoveBetaGroupsFromBuild() error: %v", err)
+	}
+}
+
 func TestGetAppStoreVersionBuild(t *testing.T) {
 	response := jsonResponse(http.StatusOK, `{"data":{"type":"builds","id":"BUILD_123","attributes":{"version":"1.0.0","uploadedDate":"2026-01-20T00:00:00Z"}}}`)
 	client := newTestClient(t, func(req *http.Request) {
