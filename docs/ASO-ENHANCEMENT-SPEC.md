@@ -29,7 +29,9 @@
 |----------|----------|----------|
 | **Localizations** | Full metadata CRUD (description, keywords, whatsNew, promotionalText, supportUrl, marketingUrl) | `localizations list/download/upload` |
 | **App Info** | Name, subtitle, privacy URLs | `localizations --type app-info` |
-| **Versions** | List, get, attach build | `versions list/get/attach-build` |
+| **Versions** | Full CRUD + attach build | `versions list/get/create/update/delete/attach-build` |
+| **Categories** | List App Store categories | `categories list` |
+| **Fastlane Migration** | Import/export/validate fastlane metadata | `migrate import/export/validate` |
 | **Phased Release** | Create, pause, resume, complete | `versions phased-release get/create/update/delete` |
 | **Submit** | Submit for review, check status, cancel | `submit create/status/cancel` |
 | **TestFlight** | Beta groups, testers, feedback, crash reports | `beta-groups`, `beta-testers`, `feedback`, `crashes` |
@@ -48,16 +50,23 @@
 | `cursor/in-app-purchases-and-subscriptions-5fad` | IAP and subscription management | TBD |
 | `cursor/app-pricing-and-availability-bc84` | Pricing and territory availability | TBD |
 
-### Actually Needs Implementation 🔨
+### Completed ✅ (Previously P1)
+
+| Feature | Status | Commands |
+|---------|--------|----------|
+| **Version CRUD** | ✅ Done | `versions create/update/delete` |
+| **Categories List** | ✅ Done | `categories list` |
+| **Fastlane Migration** | ✅ Done | `migrate import/export/validate` |
+
+### Roadmap 🔨
 
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| **Version CREATE** | P1 | Only list/get/attach-build exists |
-| **Categories** | P1 | Primary/secondary category management |
-| **Fastlane Migration** | P1 | Import/export fastlane directory structure |
-| **Custom Product Pages** | P2 | Marketing campaign pages |
-| **In-App Events** | P2 | Event cards and scheduling |
-| **A/B Experiments** | P3 | Product page optimization |
+| **Screenshot Migration** | P1 | Import/export screenshots in fastlane migrate (in progress - separate PR) |
+| **Category Assignment** | P2 | Set primary/secondary categories on apps (list exists, assignment TBD) |
+| **Custom Product Pages** | P2 | Marketing campaign pages for different audiences |
+| **In-App Events** | P2 | Event cards and scheduling for time-limited content |
+| **A/B Experiments** | P3 | Product page optimization testing |
 | **Age Rating** | P3 | Content rating declarations |
 | **App Privacy** | P3 | Privacy nutrition labels |
 
@@ -66,7 +75,7 @@
 For features already in upstream branches, we should:
 1. **Review** the existing branch implementation
 2. **Merge** if it meets our needs, or **enhance** if gaps exist
-3. **Focus new work** on: version create, categories, fastlane migration
+3. **Focus new work** on P2/P3 roadmap items above
 
 ---
 
