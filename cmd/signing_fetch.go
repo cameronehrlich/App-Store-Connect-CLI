@@ -61,6 +61,10 @@ Examples:
 				return flag.ErrHelp
 			}
 			profType = strings.ToUpper(profType)
+			if *createMissing && isDevelopmentProfile(profType) && strings.TrimSpace(*deviceIDs) == "" {
+				fmt.Fprintln(os.Stderr, "Error: --device is required for development profiles")
+				return flag.ErrHelp
+			}
 
 			outputDir := strings.TrimSpace(*outputPath)
 			if outputDir == "" {
@@ -212,10 +216,6 @@ func findOrCreateProfile(ctx context.Context, client *asc.Client, bundleIDResour
 	if len(certIDs) == 0 {
 		return nil, false, fmt.Errorf("no certificates available to create profile")
 	}
-	if isDevelopmentProfile(profileType) && len(deviceIDs) == 0 {
-		return nil, false, fmt.Errorf("no device IDs provided; use --device for development profiles")
-	}
-
 	name := fmt.Sprintf("%s-%s", profileType, time.Now().Format("20060102"))
 	profile, err := client.CreateProfile(ctx, asc.ProfileCreateAttributes{
 		Name:           name,
