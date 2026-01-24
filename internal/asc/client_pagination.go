@@ -53,6 +53,10 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 		result = &AppsResponse{Links: Links{}}
 	case *InAppPurchasesV2Response:
 		result = &InAppPurchasesV2Response{Links: Links{}}
+	case *TerritoriesResponse:
+		result = &TerritoriesResponse{Links: Links{}}
+	case *AppPricePointsV3Response:
+		result = &AppPricePointsV3Response{Links: Links{}}
 	case *BuildsResponse:
 		result = &BuildsResponse{Links: Links{}}
 	case *AppStoreVersionsResponse:
@@ -103,6 +107,10 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 			result.(*AppsResponse).Data = append(result.(*AppsResponse).Data, p.Data...)
 		case *InAppPurchasesV2Response:
 			result.(*InAppPurchasesV2Response).Data = append(result.(*InAppPurchasesV2Response).Data, p.Data...)
+		case *TerritoriesResponse:
+			result.(*TerritoriesResponse).Data = append(result.(*TerritoriesResponse).Data, p.Data...)
+		case *AppPricePointsV3Response:
+			result.(*AppPricePointsV3Response).Data = append(result.(*AppPricePointsV3Response).Data, p.Data...)
 		case *BuildsResponse:
 			result.(*BuildsResponse).Data = append(result.(*BuildsResponse).Data, p.Data...)
 		case *AppStoreVersionsResponse:
@@ -175,6 +183,10 @@ func typeOf(p PaginatedResponse) string {
 		return "AppsResponse"
 	case *InAppPurchasesV2Response:
 		return "InAppPurchasesV2Response"
+	case *TerritoriesResponse:
+		return "TerritoriesResponse"
+	case *AppPricePointsV3Response:
+		return "AppPricePointsV3Response"
 	case *BuildsResponse:
 		return "BuildsResponse"
 	case *AppStoreVersionsResponse:
