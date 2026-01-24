@@ -222,6 +222,48 @@ func TestGetBuilds_UsesNextURL(t *testing.T) {
 	}
 }
 
+func TestGetBuilds_WithPreReleaseVersion(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"builds","id":"build-1","attributes":{"version":"1.0","uploadedDate":"2026-01-20T00:00:00Z"}}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		// When filtering by preReleaseVersion, we use /v1/builds endpoint
+		if req.URL.Path != "/v1/builds" {
+			t.Fatalf("expected path /v1/builds, got %s", req.URL.Path)
+		}
+		values := req.URL.Query()
+		if values.Get("filter[app]") != "123" {
+			t.Fatalf("expected filter[app]=123, got %q", values.Get("filter[app]"))
+		}
+		if values.Get("filter[preReleaseVersion]") != "prv-456" {
+			t.Fatalf("expected filter[preReleaseVersion]=prv-456, got %q", values.Get("filter[preReleaseVersion]"))
+		}
+		if values.Get("sort") != "-uploadedDate" {
+			t.Fatalf("expected sort=-uploadedDate, got %q", values.Get("sort"))
+		}
+		if values.Get("limit") != "1" {
+			t.Fatalf("expected limit=1, got %q", values.Get("limit"))
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	builds, err := client.GetBuilds(context.Background(), "123",
+		WithBuildsLimit(1),
+		WithBuildsSort("-uploadedDate"),
+		WithBuildsPreReleaseVersion("prv-456"),
+	)
+	if err != nil {
+		t.Fatalf("GetBuilds() error: %v", err)
+	}
+	if len(builds.Data) != 1 {
+		t.Fatalf("expected 1 build, got %d", len(builds.Data))
+	}
+	if builds.Data[0].ID != "build-1" {
+		t.Fatalf("expected build ID build-1, got %s", builds.Data[0].ID)
+	}
+}
+
 func TestGetAppStoreVersions_WithFilters(t *testing.T) {
 	response := jsonResponse(http.StatusOK, `{"data":[{"type":"appStoreVersions","id":"1","attributes":{"versionString":"1.0.0","platform":"IOS"}}]}`)
 	client := newTestClient(t, func(req *http.Request) {
