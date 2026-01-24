@@ -99,6 +99,24 @@ type betaTestersQuery struct {
 	filterBuilds string
 }
 
+type betaAppReviewDetailsQuery struct {
+	listQuery
+}
+
+type betaAppReviewSubmissionsQuery struct {
+	listQuery
+	buildIDs []string
+}
+
+type buildBetaDetailsQuery struct {
+	listQuery
+	buildIDs []string
+}
+
+type betaRecruitmentCriterionOptionsQuery struct {
+	listQuery
+}
+
 func buildReviewQuery(opts []ReviewOption) string {
 	query := &reviewQuery{}
 	for _, opt := range opts {
@@ -206,6 +224,35 @@ func buildBetaTestersQuery(appID string, query *betaTestersQuery) string {
 		values.Set("filter[email]", strings.TrimSpace(query.email))
 	}
 	addCSV(values, "filter[betaGroups]", query.groupIDs)
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildBetaAppReviewDetailsQuery(appID string, query *betaAppReviewDetailsQuery) string {
+	values := url.Values{}
+	if strings.TrimSpace(appID) != "" {
+		values.Set("filter[app]", strings.TrimSpace(appID))
+	}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildBetaAppReviewSubmissionsQuery(query *betaAppReviewSubmissionsQuery) string {
+	values := url.Values{}
+	addCSV(values, "filter[build]", query.buildIDs)
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildBuildBetaDetailsQuery(query *buildBetaDetailsQuery) string {
+	values := url.Values{}
+	addCSV(values, "filter[build]", query.buildIDs)
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildBetaRecruitmentCriterionOptionsQuery(query *betaRecruitmentCriterionOptionsQuery) string {
+	values := url.Values{}
 	addLimit(values, query.limit)
 	return values.Encode()
 }

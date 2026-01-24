@@ -55,6 +55,26 @@ func PrintMarkdown(data interface{}) error {
 		return printBetaTestersMarkdown(v)
 	case *BetaTesterResponse:
 		return printBetaTesterMarkdown(v)
+	case *BetaAppReviewDetailsResponse:
+		return printBetaAppReviewDetailsMarkdown(v)
+	case *BetaAppReviewDetailResponse:
+		return printBetaAppReviewDetailMarkdown(v)
+	case *BetaAppReviewSubmissionsResponse:
+		return printBetaAppReviewSubmissionsMarkdown(v)
+	case *BetaAppReviewSubmissionResponse:
+		return printBetaAppReviewSubmissionMarkdown(v)
+	case *BuildBetaDetailsResponse:
+		return printBuildBetaDetailsMarkdown(v)
+	case *BuildBetaDetailResponse:
+		return printBuildBetaDetailMarkdown(v)
+	case *BetaRecruitmentCriterionOptionsResponse:
+		return printBetaRecruitmentCriterionOptionsMarkdown(v)
+	case *BetaRecruitmentCriteriaResponse:
+		return printBetaRecruitmentCriteriaMarkdown(v)
+	case *BetaGroupPublicLinkUsagesResponse:
+		return printBetaGroupPublicLinkUsagesMarkdown(v)
+	case *BetaGroupTesterUsagesResponse:
+		return printBetaGroupTesterUsagesMarkdown(v)
 	case *SandboxTestersResponse:
 		return printSandboxTestersMarkdown(v)
 	case *SandboxTesterResponse:
@@ -167,6 +187,26 @@ func PrintTable(data interface{}) error {
 		return printBetaTestersTable(v)
 	case *BetaTesterResponse:
 		return printBetaTesterTable(v)
+	case *BetaAppReviewDetailsResponse:
+		return printBetaAppReviewDetailsTable(v)
+	case *BetaAppReviewDetailResponse:
+		return printBetaAppReviewDetailTable(v)
+	case *BetaAppReviewSubmissionsResponse:
+		return printBetaAppReviewSubmissionsTable(v)
+	case *BetaAppReviewSubmissionResponse:
+		return printBetaAppReviewSubmissionTable(v)
+	case *BuildBetaDetailsResponse:
+		return printBuildBetaDetailsTable(v)
+	case *BuildBetaDetailResponse:
+		return printBuildBetaDetailTable(v)
+	case *BetaRecruitmentCriterionOptionsResponse:
+		return printBetaRecruitmentCriterionOptionsTable(v)
+	case *BetaRecruitmentCriteriaResponse:
+		return printBetaRecruitmentCriteriaTable(v)
+	case *BetaGroupPublicLinkUsagesResponse:
+		return printBetaGroupPublicLinkUsagesTable(v)
+	case *BetaGroupTesterUsagesResponse:
+		return printBetaGroupTesterUsagesTable(v)
 	case *SandboxTestersResponse:
 		return printSandboxTestersTable(v)
 	case *SandboxTesterResponse:
