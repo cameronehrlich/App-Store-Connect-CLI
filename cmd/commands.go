@@ -699,6 +699,7 @@ func BuildsCommand() *ffcli.Command {
 
 Examples:
   asc builds list --app "123456789"
+  asc builds latest --app "123456789"
   asc builds info --build "BUILD_ID"
   asc builds expire --build "BUILD_ID"
   asc builds upload --app "123456789" --ipa "app.ipa"
@@ -708,6 +709,7 @@ Examples:
 		UsageFunc: DefaultUsageFunc,
 		Subcommands: []*ffcli.Command{
 			listCmd,
+			BuildsLatestCommand(),
 			BuildsInfoCommand(),
 			BuildsExpireCommand(),
 			BuildsUploadCommand(),

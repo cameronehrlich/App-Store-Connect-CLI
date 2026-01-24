@@ -414,7 +414,8 @@ type appsQuery struct {
 
 type buildsQuery struct {
 	listQuery
-	sort string
+	sort                string
+	preReleaseVersionID string
 }
 
 type appStoreVersionsQuery struct {
@@ -1380,6 +1381,15 @@ func WithBuildsSort(sort string) BuildsOption {
 	}
 }
 
+// WithBuildsPreReleaseVersion filters builds by pre-release version ID.
+func WithBuildsPreReleaseVersion(preReleaseVersionID string) BuildsOption {
+	return func(q *buildsQuery) {
+		if strings.TrimSpace(preReleaseVersionID) != "" {
+			q.preReleaseVersionID = strings.TrimSpace(preReleaseVersionID)
+		}
+	}
+}
+
 // WithAppStoreVersionsLimit sets the max number of versions to return.
 func WithAppStoreVersionsLimit(limit int) AppStoreVersionsOption {
 	return func(q *appStoreVersionsQuery) {
@@ -2341,8 +2351,9 @@ func (c *Client) GetBuilds(ctx context.Context, appID string, opts ...BuildsOpti
 		path = query.nextURL
 	} else {
 		values := url.Values{}
-		// Use /v1/builds endpoint when sorting or limiting, since /v1/apps/{id}/builds doesn't support these
-		if query.sort != "" || query.limit > 0 {
+		// Use /v1/builds endpoint when sorting, limiting, or filtering by preReleaseVersion,
+		// since /v1/apps/{id}/builds doesn't support these
+		if query.sort != "" || query.limit > 0 || query.preReleaseVersionID != "" {
 			path = "/v1/builds"
 			values.Set("filter[app]", appID)
 			if query.sort != "" {
@@ -2350,6 +2361,9 @@ func (c *Client) GetBuilds(ctx context.Context, appID string, opts ...BuildsOpti
 			}
 			if query.limit > 0 {
 				values.Set("limit", strconv.Itoa(query.limit))
+			}
+			if query.preReleaseVersionID != "" {
+				values.Set("filter[preReleaseVersion]", query.preReleaseVersionID)
 			}
 		}
 		if queryString := values.Encode(); queryString != "" {
