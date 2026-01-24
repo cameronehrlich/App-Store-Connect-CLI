@@ -35,6 +35,12 @@ type BetaGroupTestersOption func(*betaGroupTestersQuery)
 // BetaTestersOption is a functional option for GetBetaTesters.
 type BetaTestersOption func(*betaTestersQuery)
 
+// UsersOption is a functional option for GetUsers.
+type UsersOption func(*usersQuery)
+
+// UserInvitationsOption is a functional option for GetUserInvitations.
+type UserInvitationsOption func(*userInvitationsQuery)
+
 // AppStoreVersionLocalizationsOption is a functional option for version localizations.
 type AppStoreVersionLocalizationsOption func(*appStoreVersionLocalizationsQuery)
 
@@ -496,6 +502,49 @@ func WithBetaTestersGroupIDs(ids []string) BetaTestersOption {
 func WithBetaTestersBuildID(buildID string) BetaTestersOption {
 	return func(q *betaTestersQuery) {
 		q.filterBuilds = strings.TrimSpace(buildID)
+	}
+}
+
+// WithUsersLimit sets the max number of users to return.
+func WithUsersLimit(limit int) UsersOption {
+	return func(q *usersQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithUsersNextURL uses a next page URL directly.
+func WithUsersNextURL(next string) UsersOption {
+	return func(q *usersQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithUsersEmail filters users by email/username.
+func WithUsersEmail(email string) UsersOption {
+	return func(q *usersQuery) {
+		q.email = strings.TrimSpace(email)
+	}
+}
+
+// WithUserInvitationsLimit sets the max number of invitations to return.
+func WithUserInvitationsLimit(limit int) UserInvitationsOption {
+	return func(q *userInvitationsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithUserInvitationsNextURL uses a next page URL directly.
+func WithUserInvitationsNextURL(next string) UserInvitationsOption {
+	return func(q *userInvitationsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
 	}
 }
 

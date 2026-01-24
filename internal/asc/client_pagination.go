@@ -65,6 +65,10 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 		result = &BetaGroupsResponse{Links: Links{}}
 	case *BetaTestersResponse:
 		result = &BetaTestersResponse{Links: Links{}}
+	case *UsersResponse:
+		result = &UsersResponse{Links: Links{}}
+	case *UserInvitationsResponse:
+		result = &UserInvitationsResponse{Links: Links{}}
 	case *SandboxTestersResponse:
 		result = &SandboxTestersResponse{Links: Links{}}
 	case *AnalyticsReportRequestsResponse:
@@ -107,6 +111,10 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 			result.(*BetaGroupsResponse).Data = append(result.(*BetaGroupsResponse).Data, p.Data...)
 		case *BetaTestersResponse:
 			result.(*BetaTestersResponse).Data = append(result.(*BetaTestersResponse).Data, p.Data...)
+		case *UsersResponse:
+			result.(*UsersResponse).Data = append(result.(*UsersResponse).Data, p.Data...)
+		case *UserInvitationsResponse:
+			result.(*UserInvitationsResponse).Data = append(result.(*UserInvitationsResponse).Data, p.Data...)
 		case *SandboxTestersResponse:
 			result.(*SandboxTestersResponse).Data = append(result.(*SandboxTestersResponse).Data, p.Data...)
 		case *AnalyticsReportRequestsResponse:
