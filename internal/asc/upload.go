@@ -44,13 +44,6 @@ func WithUploadHTTPClient(client *http.Client) UploadOption {
 	}
 }
 
-// WithUploadRetryOptions sets retry options for upload operations.
-func WithUploadRetryOptions(retryOpts RetryOptions) UploadOption {
-	return func(opts *UploadOptions) {
-		opts.RetryOpts = retryOpts
-	}
-}
-
 // ExecuteUploadOperations performs the file uploads for the provided operations.
 func ExecuteUploadOperations(ctx context.Context, filePath string, operations []UploadOperation, opts ...UploadOption) error {
 	if ctx == nil {
