@@ -51,6 +51,8 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 		result = &ReviewsResponse{Links: Links{}}
 	case *AppsResponse:
 		result = &AppsResponse{Links: Links{}}
+	case *InAppPurchasesV2Response:
+		result = &InAppPurchasesV2Response{Links: Links{}}
 	case *BuildsResponse:
 		result = &BuildsResponse{Links: Links{}}
 	case *AppStoreVersionsResponse:
@@ -61,6 +63,12 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 		result = &AppStoreVersionLocalizationsResponse{Links: Links{}}
 	case *AppInfoLocalizationsResponse:
 		result = &AppInfoLocalizationsResponse{Links: Links{}}
+	case *InAppPurchaseLocalizationsResponse:
+		result = &InAppPurchaseLocalizationsResponse{Links: Links{}}
+	case *SubscriptionGroupsResponse:
+		result = &SubscriptionGroupsResponse{Links: Links{}}
+	case *SubscriptionsResponse:
+		result = &SubscriptionsResponse{Links: Links{}}
 	case *BetaGroupsResponse:
 		result = &BetaGroupsResponse{Links: Links{}}
 	case *BetaTestersResponse:
@@ -93,6 +101,8 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 			result.(*ReviewsResponse).Data = append(result.(*ReviewsResponse).Data, p.Data...)
 		case *AppsResponse:
 			result.(*AppsResponse).Data = append(result.(*AppsResponse).Data, p.Data...)
+		case *InAppPurchasesV2Response:
+			result.(*InAppPurchasesV2Response).Data = append(result.(*InAppPurchasesV2Response).Data, p.Data...)
 		case *BuildsResponse:
 			result.(*BuildsResponse).Data = append(result.(*BuildsResponse).Data, p.Data...)
 		case *AppStoreVersionsResponse:
@@ -103,6 +113,12 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 			result.(*AppStoreVersionLocalizationsResponse).Data = append(result.(*AppStoreVersionLocalizationsResponse).Data, p.Data...)
 		case *AppInfoLocalizationsResponse:
 			result.(*AppInfoLocalizationsResponse).Data = append(result.(*AppInfoLocalizationsResponse).Data, p.Data...)
+		case *InAppPurchaseLocalizationsResponse:
+			result.(*InAppPurchaseLocalizationsResponse).Data = append(result.(*InAppPurchaseLocalizationsResponse).Data, p.Data...)
+		case *SubscriptionGroupsResponse:
+			result.(*SubscriptionGroupsResponse).Data = append(result.(*SubscriptionGroupsResponse).Data, p.Data...)
+		case *SubscriptionsResponse:
+			result.(*SubscriptionsResponse).Data = append(result.(*SubscriptionsResponse).Data, p.Data...)
 		case *BetaGroupsResponse:
 			result.(*BetaGroupsResponse).Data = append(result.(*BetaGroupsResponse).Data, p.Data...)
 		case *BetaTestersResponse:
@@ -157,6 +173,8 @@ func typeOf(p PaginatedResponse) string {
 		return "ReviewsResponse"
 	case *AppsResponse:
 		return "AppsResponse"
+	case *InAppPurchasesV2Response:
+		return "InAppPurchasesV2Response"
 	case *BuildsResponse:
 		return "BuildsResponse"
 	case *AppStoreVersionsResponse:
@@ -167,6 +185,12 @@ func typeOf(p PaginatedResponse) string {
 		return "AppStoreVersionLocalizationsResponse"
 	case *AppInfoLocalizationsResponse:
 		return "AppInfoLocalizationsResponse"
+	case *InAppPurchaseLocalizationsResponse:
+		return "InAppPurchaseLocalizationsResponse"
+	case *SubscriptionGroupsResponse:
+		return "SubscriptionGroupsResponse"
+	case *SubscriptionsResponse:
+		return "SubscriptionsResponse"
 	case *BetaGroupsResponse:
 		return "BetaGroupsResponse"
 	case *BetaTestersResponse:

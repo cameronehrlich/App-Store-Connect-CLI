@@ -389,6 +389,231 @@ func TestBetaManagementValidationErrors(t *testing.T) {
 	}
 }
 
+func TestIAPValidationErrors(t *testing.T) {
+	t.Setenv("ASC_APP_ID", "")
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "iap list missing app",
+			args:    []string{"iap", "list"},
+			wantErr: "--app is required",
+		},
+		{
+			name:    "iap get missing id",
+			args:    []string{"iap", "get"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "iap create missing app",
+			args:    []string{"iap", "create", "--type", "CONSUMABLE", "--ref-name", "Pro", "--product-id", "com.example.pro"},
+			wantErr: "--app is required",
+		},
+		{
+			name:    "iap create missing type",
+			args:    []string{"iap", "create", "--app", "APP_ID", "--ref-name", "Pro", "--product-id", "com.example.pro"},
+			wantErr: "--type is required",
+		},
+		{
+			name:    "iap create invalid type",
+			args:    []string{"iap", "create", "--app", "APP_ID", "--type", "UNKNOWN", "--ref-name", "Pro", "--product-id", "com.example.pro"},
+			wantErr: "--type must be one of",
+		},
+		{
+			name:    "iap create missing ref-name",
+			args:    []string{"iap", "create", "--app", "APP_ID", "--type", "CONSUMABLE", "--product-id", "com.example.pro"},
+			wantErr: "--ref-name is required",
+		},
+		{
+			name:    "iap create missing product-id",
+			args:    []string{"iap", "create", "--app", "APP_ID", "--type", "CONSUMABLE", "--ref-name", "Pro"},
+			wantErr: "--product-id is required",
+		},
+		{
+			name:    "iap update missing id",
+			args:    []string{"iap", "update"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "iap update missing update flags",
+			args:    []string{"iap", "update", "--id", "IAP_ID"},
+			wantErr: "at least one update flag is required",
+		},
+		{
+			name:    "iap delete missing id",
+			args:    []string{"iap", "delete"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "iap delete missing confirm",
+			args:    []string{"iap", "delete", "--id", "IAP_ID"},
+			wantErr: "--confirm is required",
+		},
+		{
+			name:    "iap localizations list missing id",
+			args:    []string{"iap", "localizations", "list"},
+			wantErr: "--id is required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				err := root.Run(context.Background())
+				if !errors.Is(err, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", err)
+				}
+			})
+
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if !strings.Contains(stderr, test.wantErr) {
+				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			}
+		})
+	}
+}
+
+func TestSubscriptionsValidationErrors(t *testing.T) {
+	t.Setenv("ASC_APP_ID", "")
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "subscriptions groups list missing app",
+			args:    []string{"subscriptions", "groups", "list"},
+			wantErr: "--app is required",
+		},
+		{
+			name:    "subscriptions groups create missing app",
+			args:    []string{"subscriptions", "groups", "create", "--reference-name", "Premium"},
+			wantErr: "--app is required",
+		},
+		{
+			name:    "subscriptions groups create missing reference-name",
+			args:    []string{"subscriptions", "groups", "create", "--app", "APP_ID"},
+			wantErr: "--reference-name is required",
+		},
+		{
+			name:    "subscriptions groups get missing id",
+			args:    []string{"subscriptions", "groups", "get"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "subscriptions groups update missing id",
+			args:    []string{"subscriptions", "groups", "update"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "subscriptions groups update missing update flags",
+			args:    []string{"subscriptions", "groups", "update", "--id", "GROUP_ID"},
+			wantErr: "at least one update flag is required",
+		},
+		{
+			name:    "subscriptions groups delete missing confirm",
+			args:    []string{"subscriptions", "groups", "delete", "--id", "GROUP_ID"},
+			wantErr: "--confirm is required",
+		},
+		{
+			name:    "subscriptions list missing group",
+			args:    []string{"subscriptions", "list"},
+			wantErr: "--group is required",
+		},
+		{
+			name:    "subscriptions create missing group",
+			args:    []string{"subscriptions", "create", "--ref-name", "Monthly", "--product-id", "com.example.sub"},
+			wantErr: "--group is required",
+		},
+		{
+			name:    "subscriptions create missing ref-name",
+			args:    []string{"subscriptions", "create", "--group", "GROUP_ID", "--product-id", "com.example.sub"},
+			wantErr: "--ref-name is required",
+		},
+		{
+			name:    "subscriptions create missing product-id",
+			args:    []string{"subscriptions", "create", "--group", "GROUP_ID", "--ref-name", "Monthly"},
+			wantErr: "--product-id is required",
+		},
+		{
+			name:    "subscriptions get missing id",
+			args:    []string{"subscriptions", "get"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "subscriptions update missing id",
+			args:    []string{"subscriptions", "update"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "subscriptions update missing update flags",
+			args:    []string{"subscriptions", "update", "--id", "SUB_ID"},
+			wantErr: "at least one update flag is required",
+		},
+		{
+			name:    "subscriptions delete missing confirm",
+			args:    []string{"subscriptions", "delete", "--id", "SUB_ID"},
+			wantErr: "--confirm is required",
+		},
+		{
+			name:    "subscriptions prices add missing id",
+			args:    []string{"subscriptions", "prices", "add", "--price-point", "PRICE_POINT_ID"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "subscriptions prices add missing price-point",
+			args:    []string{"subscriptions", "prices", "add", "--id", "SUB_ID"},
+			wantErr: "--price-point is required",
+		},
+		{
+			name:    "subscriptions availability set missing id",
+			args:    []string{"subscriptions", "availability", "set", "--territory", "USA"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "subscriptions availability set missing territory",
+			args:    []string{"subscriptions", "availability", "set", "--id", "SUB_ID"},
+			wantErr: "--territory is required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				err := root.Run(context.Background())
+				if !errors.Is(err, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", err)
+				}
+			})
+
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if !strings.Contains(stderr, test.wantErr) {
+				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			}
+		})
+	}
+}
+
 func TestTestFlightAppsValidationErrors(t *testing.T) {
 	t.Setenv("ASC_KEY_ID", "")
 	t.Setenv("ASC_ISSUER_ID", "")

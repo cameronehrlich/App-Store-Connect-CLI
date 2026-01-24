@@ -2623,3 +2623,383 @@ func TestResolveGitReferenceByName_NoMatch(t *testing.T) {
 		t.Fatalf("expected no git reference named error, got %v", err)
 	}
 }
+
+func TestGetInAppPurchasesV2_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"inAppPurchases","id":"iap-1","attributes":{"name":"Pro","productId":"com.example.pro","inAppPurchaseType":"CONSUMABLE"}}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v2/apps/123/inAppPurchases" {
+			t.Fatalf("expected path /v2/apps/123/inAppPurchases, got %s", req.URL.Path)
+		}
+		if req.URL.Query().Get("limit") != "10" {
+			t.Fatalf("expected limit=10, got %q", req.URL.Query().Get("limit"))
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetInAppPurchasesV2(context.Background(), "123", WithIAPLimit(10)); err != nil {
+		t.Fatalf("GetInAppPurchasesV2() error: %v", err)
+	}
+}
+
+func TestGetInAppPurchasesV2_UsesNextURL(t *testing.T) {
+	next := "https://api.appstoreconnect.apple.com/v2/apps/123/inAppPurchases?cursor=abc"
+	response := jsonResponse(http.StatusOK, `{"data":[]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.URL.String() != next {
+			t.Fatalf("expected next URL %q, got %q", next, req.URL.String())
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetInAppPurchasesV2(context.Background(), "123", WithIAPNextURL(next)); err != nil {
+		t.Fatalf("GetInAppPurchasesV2() error: %v", err)
+	}
+}
+
+func TestGetInAppPurchaseV2(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"inAppPurchases","id":"iap-1","attributes":{"name":"Pro","productId":"com.example.pro","inAppPurchaseType":"CONSUMABLE"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v2/inAppPurchases/iap-1" {
+			t.Fatalf("expected path /v2/inAppPurchases/iap-1, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetInAppPurchaseV2(context.Background(), "iap-1"); err != nil {
+		t.Fatalf("GetInAppPurchaseV2() error: %v", err)
+	}
+}
+
+func TestCreateInAppPurchaseV2(t *testing.T) {
+	response := jsonResponse(http.StatusCreated, `{"data":{"type":"inAppPurchases","id":"iap-1","attributes":{"name":"Pro","productId":"com.example.pro","inAppPurchaseType":"CONSUMABLE"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v2/inAppPurchases" {
+			t.Fatalf("expected path /v2/inAppPurchases, got %s", req.URL.Path)
+		}
+		var payload InAppPurchaseV2CreateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.Type != ResourceTypeInAppPurchases {
+			t.Fatalf("expected type inAppPurchases, got %q", payload.Data.Type)
+		}
+		if payload.Data.Attributes.Name != "Pro" || payload.Data.Attributes.ProductID != "com.example.pro" {
+			t.Fatalf("unexpected attributes: %+v", payload.Data.Attributes)
+		}
+		if payload.Data.Relationships == nil || payload.Data.Relationships.App == nil {
+			t.Fatalf("expected app relationship")
+		}
+		if payload.Data.Relationships.App.Data.Type != ResourceTypeApps || payload.Data.Relationships.App.Data.ID != "app-1" {
+			t.Fatalf("unexpected relationship: %+v", payload.Data.Relationships.App.Data)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	attrs := InAppPurchaseV2CreateAttributes{
+		Name:              "Pro",
+		ProductID:         "com.example.pro",
+		InAppPurchaseType: "CONSUMABLE",
+	}
+	if _, err := client.CreateInAppPurchaseV2(context.Background(), "app-1", attrs); err != nil {
+		t.Fatalf("CreateInAppPurchaseV2() error: %v", err)
+	}
+}
+
+func TestUpdateInAppPurchaseV2(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"inAppPurchases","id":"iap-1","attributes":{"name":"Pro","productId":"com.example.pro","inAppPurchaseType":"CONSUMABLE"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPatch {
+			t.Fatalf("expected PATCH, got %s", req.Method)
+		}
+		if req.URL.Path != "/v2/inAppPurchases/iap-1" {
+			t.Fatalf("expected path /v2/inAppPurchases/iap-1, got %s", req.URL.Path)
+		}
+		var payload InAppPurchaseV2UpdateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.ID != "iap-1" || payload.Data.Type != ResourceTypeInAppPurchases {
+			t.Fatalf("unexpected payload: %+v", payload.Data)
+		}
+		if payload.Data.Attributes == nil || payload.Data.Attributes.Name == nil || *payload.Data.Attributes.Name != "New Name" {
+			t.Fatalf("expected name update, got %+v", payload.Data.Attributes)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	name := "New Name"
+	attrs := InAppPurchaseV2UpdateAttributes{Name: &name}
+	if _, err := client.UpdateInAppPurchaseV2(context.Background(), "iap-1", attrs); err != nil {
+		t.Fatalf("UpdateInAppPurchaseV2() error: %v", err)
+	}
+}
+
+func TestDeleteInAppPurchaseV2(t *testing.T) {
+	response := jsonResponse(http.StatusNoContent, "")
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodDelete {
+			t.Fatalf("expected DELETE, got %s", req.Method)
+		}
+		if req.URL.Path != "/v2/inAppPurchases/iap-1" {
+			t.Fatalf("expected path /v2/inAppPurchases/iap-1, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if err := client.DeleteInAppPurchaseV2(context.Background(), "iap-1"); err != nil {
+		t.Fatalf("DeleteInAppPurchaseV2() error: %v", err)
+	}
+}
+
+func TestGetInAppPurchaseLocalizations_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"inAppPurchaseLocalizations","id":"loc-1","attributes":{"name":"Pro","locale":"en-US"}}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v2/inAppPurchases/iap-1/inAppPurchaseLocalizations" {
+			t.Fatalf("expected path /v2/inAppPurchases/iap-1/inAppPurchaseLocalizations, got %s", req.URL.Path)
+		}
+		if req.URL.Query().Get("limit") != "5" {
+			t.Fatalf("expected limit=5, got %q", req.URL.Query().Get("limit"))
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetInAppPurchaseLocalizations(context.Background(), "iap-1", WithIAPLocalizationsLimit(5)); err != nil {
+		t.Fatalf("GetInAppPurchaseLocalizations() error: %v", err)
+	}
+}
+
+func TestGetSubscriptionGroups_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"subscriptionGroups","id":"group-1","attributes":{"referenceName":"Premium"}}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/apps/app-1/subscriptionGroups" {
+			t.Fatalf("expected path /v1/apps/app-1/subscriptionGroups, got %s", req.URL.Path)
+		}
+		if req.URL.Query().Get("limit") != "20" {
+			t.Fatalf("expected limit=20, got %q", req.URL.Query().Get("limit"))
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetSubscriptionGroups(context.Background(), "app-1", WithSubscriptionGroupsLimit(20)); err != nil {
+		t.Fatalf("GetSubscriptionGroups() error: %v", err)
+	}
+}
+
+func TestGetSubscriptionGroups_UsesNextURL(t *testing.T) {
+	next := "https://api.appstoreconnect.apple.com/v1/apps/app-1/subscriptionGroups?cursor=abc"
+	response := jsonResponse(http.StatusOK, `{"data":[]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.URL.String() != next {
+			t.Fatalf("expected next URL %q, got %q", next, req.URL.String())
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetSubscriptionGroups(context.Background(), "app-1", WithSubscriptionGroupsNextURL(next)); err != nil {
+		t.Fatalf("GetSubscriptionGroups() error: %v", err)
+	}
+}
+
+func TestCreateSubscriptionGroup(t *testing.T) {
+	response := jsonResponse(http.StatusCreated, `{"data":{"type":"subscriptionGroups","id":"group-1","attributes":{"referenceName":"Premium"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/subscriptionGroups" {
+			t.Fatalf("expected path /v1/subscriptionGroups, got %s", req.URL.Path)
+		}
+		var payload SubscriptionGroupCreateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.Type != ResourceTypeSubscriptionGroups {
+			t.Fatalf("expected type subscriptionGroups, got %q", payload.Data.Type)
+		}
+		if payload.Data.Attributes.ReferenceName != "Premium" {
+			t.Fatalf("unexpected attributes: %+v", payload.Data.Attributes)
+		}
+		if payload.Data.Relationships == nil || payload.Data.Relationships.App == nil {
+			t.Fatalf("expected app relationship")
+		}
+		if payload.Data.Relationships.App.Data.Type != ResourceTypeApps || payload.Data.Relationships.App.Data.ID != "app-1" {
+			t.Fatalf("unexpected relationship: %+v", payload.Data.Relationships.App.Data)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	attrs := SubscriptionGroupCreateAttributes{ReferenceName: "Premium"}
+	if _, err := client.CreateSubscriptionGroup(context.Background(), "app-1", attrs); err != nil {
+		t.Fatalf("CreateSubscriptionGroup() error: %v", err)
+	}
+}
+
+func TestUpdateSubscriptionGroup(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"subscriptionGroups","id":"group-1","attributes":{"referenceName":"Updated"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPatch {
+			t.Fatalf("expected PATCH, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/subscriptionGroups/group-1" {
+			t.Fatalf("expected path /v1/subscriptionGroups/group-1, got %s", req.URL.Path)
+		}
+		var payload SubscriptionGroupUpdateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.ID != "group-1" || payload.Data.Type != ResourceTypeSubscriptionGroups {
+			t.Fatalf("unexpected payload: %+v", payload.Data)
+		}
+		if payload.Data.Attributes.ReferenceName == nil || *payload.Data.Attributes.ReferenceName != "Updated" {
+			t.Fatalf("expected reference name update, got %+v", payload.Data.Attributes)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	name := "Updated"
+	attrs := SubscriptionGroupUpdateAttributes{ReferenceName: &name}
+	if _, err := client.UpdateSubscriptionGroup(context.Background(), "group-1", attrs); err != nil {
+		t.Fatalf("UpdateSubscriptionGroup() error: %v", err)
+	}
+}
+
+func TestGetSubscriptions_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"subscriptions","id":"sub-1","attributes":{"name":"Monthly","productId":"com.example.sub.monthly"}}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/subscriptionGroups/group-1/subscriptions" {
+			t.Fatalf("expected path /v1/subscriptionGroups/group-1/subscriptions, got %s", req.URL.Path)
+		}
+		if req.URL.Query().Get("limit") != "5" {
+			t.Fatalf("expected limit=5, got %q", req.URL.Query().Get("limit"))
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetSubscriptions(context.Background(), "group-1", WithSubscriptionsLimit(5)); err != nil {
+		t.Fatalf("GetSubscriptions() error: %v", err)
+	}
+}
+
+func TestCreateSubscription(t *testing.T) {
+	response := jsonResponse(http.StatusCreated, `{"data":{"type":"subscriptions","id":"sub-1","attributes":{"name":"Monthly","productId":"com.example.sub.monthly"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/subscriptions" {
+			t.Fatalf("expected path /v1/subscriptions, got %s", req.URL.Path)
+		}
+		var payload SubscriptionCreateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.Type != ResourceTypeSubscriptions {
+			t.Fatalf("expected type subscriptions, got %q", payload.Data.Type)
+		}
+		if payload.Data.Attributes.Name != "Monthly" || payload.Data.Attributes.ProductID != "com.example.sub.monthly" {
+			t.Fatalf("unexpected attributes: %+v", payload.Data.Attributes)
+		}
+		if payload.Data.Relationships == nil || payload.Data.Relationships.SubscriptionGroup == nil {
+			t.Fatalf("expected subscriptionGroup relationship")
+		}
+		if payload.Data.Relationships.SubscriptionGroup.Data.Type != ResourceTypeSubscriptionGroups || payload.Data.Relationships.SubscriptionGroup.Data.ID != "group-1" {
+			t.Fatalf("unexpected relationship: %+v", payload.Data.Relationships.SubscriptionGroup.Data)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	attrs := SubscriptionCreateAttributes{
+		Name:      "Monthly",
+		ProductID: "com.example.sub.monthly",
+	}
+	if _, err := client.CreateSubscription(context.Background(), "group-1", attrs); err != nil {
+		t.Fatalf("CreateSubscription() error: %v", err)
+	}
+}
+
+func TestCreateSubscriptionPrice(t *testing.T) {
+	response := jsonResponse(http.StatusCreated, `{"data":{"type":"subscriptionPrices","id":"price-1","attributes":{"startDate":"2026-01-01","preserved":true}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/subscriptionPrices" {
+			t.Fatalf("expected path /v1/subscriptionPrices, got %s", req.URL.Path)
+		}
+		var payload SubscriptionPriceCreateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.Type != ResourceTypeSubscriptionPrices {
+			t.Fatalf("expected type subscriptionPrices, got %q", payload.Data.Type)
+		}
+		if payload.Data.Relationships == nil || payload.Data.Relationships.Subscription == nil || payload.Data.Relationships.SubscriptionPricePoint == nil {
+			t.Fatalf("expected subscription and price point relationships")
+		}
+		if payload.Data.Relationships.Subscription.Data.ID != "sub-1" || payload.Data.Relationships.SubscriptionPricePoint.Data.ID != "price-point-1" {
+			t.Fatalf("unexpected relationships: %+v", payload.Data.Relationships)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	preserved := true
+	attrs := SubscriptionPriceCreateAttributes{
+		StartDate: "2026-01-01",
+		Preserved: &preserved,
+	}
+	if _, err := client.CreateSubscriptionPrice(context.Background(), "sub-1", "price-point-1", attrs); err != nil {
+		t.Fatalf("CreateSubscriptionPrice() error: %v", err)
+	}
+}
+
+func TestCreateSubscriptionAvailability(t *testing.T) {
+	response := jsonResponse(http.StatusCreated, `{"data":{"type":"subscriptionAvailabilities","id":"avail-1","attributes":{"availableInNewTerritories":true}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/subscriptionAvailabilities" {
+			t.Fatalf("expected path /v1/subscriptionAvailabilities, got %s", req.URL.Path)
+		}
+		var payload SubscriptionAvailabilityCreateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.Type != ResourceTypeSubscriptionAvailabilities {
+			t.Fatalf("expected type subscriptionAvailabilities, got %q", payload.Data.Type)
+		}
+		if payload.Data.Relationships == nil || payload.Data.Relationships.Subscription == nil || payload.Data.Relationships.AvailableTerritories == nil {
+			t.Fatalf("expected subscription and territory relationships")
+		}
+		if payload.Data.Relationships.Subscription.Data.ID != "sub-1" {
+			t.Fatalf("unexpected subscription relationship: %+v", payload.Data.Relationships.Subscription.Data)
+		}
+		if len(payload.Data.Relationships.AvailableTerritories.Data) != 2 {
+			t.Fatalf("expected 2 territories, got %d", len(payload.Data.Relationships.AvailableTerritories.Data))
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	attrs := SubscriptionAvailabilityAttributes{AvailableInNewTerritories: true}
+	if _, err := client.CreateSubscriptionAvailability(context.Background(), "sub-1", []string{"USA", "CAN"}, attrs); err != nil {
+		t.Fatalf("CreateSubscriptionAvailability() error: %v", err)
+	}
+}

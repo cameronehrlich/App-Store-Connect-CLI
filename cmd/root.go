@@ -50,6 +50,8 @@ func RootCommand(version string) *ffcli.Command {
 			BetaGroupsCommand(),
 			BetaTestersCommand(),
 			SandboxCommand(),
+			IAPCommand(),
+			SubscriptionsCommand(),
 			SubmitCommand(),
 			XcodeCloudCommand(),
 			VersionCommand(version),

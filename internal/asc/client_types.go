@@ -27,6 +27,15 @@ const (
 	ResourceTypeAnalyticsReports             ResourceType = "analyticsReports"
 	ResourceTypeAnalyticsReportInstances     ResourceType = "analyticsReportInstances"
 	ResourceTypeAnalyticsReportSegments      ResourceType = "analyticsReportSegments"
+	ResourceTypeInAppPurchases               ResourceType = "inAppPurchases"
+	ResourceTypeInAppPurchaseLocalizations   ResourceType = "inAppPurchaseLocalizations"
+	ResourceTypeInAppPurchasePriceSchedules  ResourceType = "inAppPurchasePriceSchedules"
+	ResourceTypeSubscriptionGroups           ResourceType = "subscriptionGroups"
+	ResourceTypeSubscriptions                ResourceType = "subscriptions"
+	ResourceTypeSubscriptionPrices           ResourceType = "subscriptionPrices"
+	ResourceTypeSubscriptionAvailabilities   ResourceType = "subscriptionAvailabilities"
+	ResourceTypeSubscriptionPricePoints      ResourceType = "subscriptionPricePoints"
+	ResourceTypeTerritories                  ResourceType = "territories"
 )
 
 // Resource is a generic ASC API resource wrapper.
