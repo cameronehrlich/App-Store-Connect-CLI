@@ -47,7 +47,6 @@ func MigrateImportCommand() *ffcli.Command {
 	appID := fs.String("app", "", "App Store Connect app ID (or ASC_APP_ID)")
 	versionID := fs.String("version-id", "", "App Store version ID (required)")
 	fastlaneDir := fs.String("fastlane-dir", "", "Path to fastlane directory (required)")
-	metadataOnly := fs.Bool("metadata-only", false, "Import only metadata (skip screenshots)")
 	dryRun := fs.Bool("dry-run", false, "Preview changes without uploading")
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
@@ -58,29 +57,25 @@ func MigrateImportCommand() *ffcli.Command {
 		ShortHelp:  "Import metadata from fastlane directory structure.",
 		LongHelp: `Import metadata from fastlane directory structure.
 
-Reads from the standard fastlane structure:
+Reads App Store Version localization fields from fastlane structure:
   fastlane/
   ├── metadata/
   │   ├── en-US/
   │   │   ├── description.txt
   │   │   ├── keywords.txt
-  │   │   ├── name.txt
-  │   │   ├── subtitle.txt
   │   │   ├── release_notes.txt
   │   │   ├── promotional_text.txt
   │   │   ├── support_url.txt
-  │   │   ├── marketing_url.txt
-  │   │   └── privacy_url.txt
+  │   │   └── marketing_url.txt
   │   └── de-DE/
   │       └── ...
-  └── screenshots/
-      └── en-US/
-          └── ...
+
+Note: name.txt, subtitle.txt, and privacy_url.txt are App Info fields
+(not version-specific) and are not imported by this command.
 
 Examples:
   asc migrate import --app "APP_ID" --version-id "VERSION_ID" --fastlane-dir ./fastlane
-  asc migrate import --app "APP_ID" --version-id "VERSION_ID" --fastlane-dir ./fastlane --dry-run
-  asc migrate import --app "APP_ID" --version-id "VERSION_ID" --fastlane-dir ./fastlane --metadata-only`,
+  asc migrate import --app "APP_ID" --version-id "VERSION_ID" --fastlane-dir ./fastlane --dry-run`,
 		FlagSet:   fs,
 		UsageFunc: DefaultUsageFunc,
 		Exec: func(ctx context.Context, args []string) error {
@@ -181,9 +176,6 @@ Examples:
 				Uploaded:      uploaded,
 			}
 
-			// Note: Screenshot import not implemented in this version
-			_ = metadataOnly
-
 			return printMigrateOutput(result, *output, *pretty)
 		},
 	}
@@ -249,6 +241,7 @@ Examples:
 
 			// Write each localization
 			exported := make([]string, 0, len(resp.Data))
+			totalFiles := 0
 			for _, loc := range resp.Data {
 				locale := loc.Attributes.Locale
 				localeDir := filepath.Join(metadataDir, locale)
@@ -256,22 +249,22 @@ Examples:
 					return fmt.Errorf("migrate export: failed to create locale directory: %w", err)
 				}
 
-				// Write files
-				writeIfNotEmpty(filepath.Join(localeDir, "description.txt"), loc.Attributes.Description)
-				writeIfNotEmpty(filepath.Join(localeDir, "keywords.txt"), loc.Attributes.Keywords)
-				writeIfNotEmpty(filepath.Join(localeDir, "release_notes.txt"), loc.Attributes.WhatsNew)
-				writeIfNotEmpty(filepath.Join(localeDir, "promotional_text.txt"), loc.Attributes.PromotionalText)
-				writeIfNotEmpty(filepath.Join(localeDir, "support_url.txt"), loc.Attributes.SupportURL)
-				writeIfNotEmpty(filepath.Join(localeDir, "marketing_url.txt"), loc.Attributes.MarketingURL)
+				// Write files (only non-empty content creates files)
+				totalFiles += writeAndCount(filepath.Join(localeDir, "description.txt"), loc.Attributes.Description)
+				totalFiles += writeAndCount(filepath.Join(localeDir, "keywords.txt"), loc.Attributes.Keywords)
+				totalFiles += writeAndCount(filepath.Join(localeDir, "release_notes.txt"), loc.Attributes.WhatsNew)
+				totalFiles += writeAndCount(filepath.Join(localeDir, "promotional_text.txt"), loc.Attributes.PromotionalText)
+				totalFiles += writeAndCount(filepath.Join(localeDir, "support_url.txt"), loc.Attributes.SupportURL)
+				totalFiles += writeAndCount(filepath.Join(localeDir, "marketing_url.txt"), loc.Attributes.MarketingURL)
 
 				exported = append(exported, locale)
 			}
 
 			result := &MigrateExportResult{
-				VersionID:   strings.TrimSpace(*versionID),
-				OutputDir:   *outputDir,
-				Locales:     exported,
-				TotalFiles:  len(exported) * 6, // 6 files per locale
+				VersionID:  strings.TrimSpace(*versionID),
+				OutputDir:  *outputDir,
+				Locales:    exported,
+				TotalFiles: totalFiles,
 			}
 
 			return printMigrateOutput(result, *output, *pretty)
@@ -280,6 +273,8 @@ Examples:
 }
 
 // FastlaneLocalization holds metadata read from fastlane structure.
+// Note: name, subtitle, and privacy_url are App Info fields (not version-specific)
+// and are handled separately via the localizations --type app-info commands.
 type FastlaneLocalization struct {
 	Locale          string `json:"locale"`
 	Description     string `json:"description,omitempty"`
@@ -288,8 +283,6 @@ type FastlaneLocalization struct {
 	PromotionalText string `json:"promotionalText,omitempty"`
 	SupportURL      string `json:"supportUrl,omitempty"`
 	MarketingURL    string `json:"marketingUrl,omitempty"`
-	Name            string `json:"name,omitempty"`
-	Subtitle        string `json:"subtitle,omitempty"`
 }
 
 // LocalizationUploadItem represents an uploaded localization.
@@ -335,15 +328,13 @@ func readFastlaneMetadata(metadataDir string) ([]FastlaneLocalization, error) {
 		localeDir := filepath.Join(metadataDir, locale)
 		loc := FastlaneLocalization{Locale: locale}
 
-		// Read each metadata file
+		// Read each metadata file (version-level localization fields only)
 		loc.Description = readFileIfExists(filepath.Join(localeDir, "description.txt"))
 		loc.Keywords = readFileIfExists(filepath.Join(localeDir, "keywords.txt"))
 		loc.WhatsNew = readFileIfExists(filepath.Join(localeDir, "release_notes.txt"))
 		loc.PromotionalText = readFileIfExists(filepath.Join(localeDir, "promotional_text.txt"))
 		loc.SupportURL = readFileIfExists(filepath.Join(localeDir, "support_url.txt"))
 		loc.MarketingURL = readFileIfExists(filepath.Join(localeDir, "marketing_url.txt"))
-		loc.Name = readFileIfExists(filepath.Join(localeDir, "name.txt"))
-		loc.Subtitle = readFileIfExists(filepath.Join(localeDir, "subtitle.txt"))
 
 		localizations = append(localizations, loc)
 	}
@@ -360,72 +351,65 @@ func readFileIfExists(path string) string {
 	return strings.TrimSpace(string(data))
 }
 
-// writeIfNotEmpty writes content to a file only if the content is not empty.
-func writeIfNotEmpty(path, content string) error {
+// writeAndCount writes content to a file and returns 1 if written, 0 if skipped.
+func writeAndCount(path, content string) int {
 	if content == "" {
-		return nil
+		return 0
 	}
-	return os.WriteFile(path, []byte(content+"\n"), 0644)
+	if err := os.WriteFile(path, []byte(content+"\n"), 0644); err != nil {
+		return 0
+	}
+	return 1
 }
 
 // printMigrateOutput handles output for migrate-specific result types.
 func printMigrateOutput(data interface{}, format string, pretty bool) error {
 	format = strings.ToLower(format)
-	switch format {
-	case "json":
+
+	if format == "json" {
 		if pretty {
 			return asc.PrintPrettyJSON(data)
 		}
 		return asc.PrintJSON(data)
-	case "markdown", "md":
-		switch v := data.(type) {
-		case *MigrateImportResult:
+	}
+
+	switch v := data.(type) {
+	case *MigrateImportResult:
+		if format == "markdown" || format == "md" {
 			return printMigrateImportResultMarkdown(v)
-		case *MigrateExportResult:
-			return printMigrateExportResultMarkdown(v)
-		default:
-			return asc.PrintJSON(data)
 		}
-	case "table":
-		switch v := data.(type) {
-		case *MigrateImportResult:
+		if format == "table" {
 			return printMigrateImportResultTable(v)
-		case *MigrateExportResult:
+		}
+	case *MigrateExportResult:
+		if format == "markdown" || format == "md" {
+			return printMigrateExportResultMarkdown(v)
+		}
+		if format == "table" {
 			return printMigrateExportResultTable(v)
-		default:
-			return asc.PrintJSON(data)
 		}
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return asc.PrintJSON(data)
 	}
+
+	return fmt.Errorf("unsupported format: %s", format)
 }
 
 // countNonEmptyFields counts the number of non-empty fields in a localization.
 func countNonEmptyFields(loc FastlaneLocalization) int {
 	count := 0
-	if loc.Description != "" {
-		count++
+	fields := []string{
+		loc.Description,
+		loc.Keywords,
+		loc.WhatsNew,
+		loc.PromotionalText,
+		loc.SupportURL,
+		loc.MarketingURL,
 	}
-	if loc.Keywords != "" {
-		count++
-	}
-	if loc.WhatsNew != "" {
-		count++
-	}
-	if loc.PromotionalText != "" {
-		count++
-	}
-	if loc.SupportURL != "" {
-		count++
-	}
-	if loc.MarketingURL != "" {
-		count++
-	}
-	if loc.Name != "" {
-		count++
-	}
-	if loc.Subtitle != "" {
-		count++
+	for _, f := range fields {
+		if f != "" {
+			count++
+		}
 	}
 	return count
 }

@@ -40,13 +40,13 @@ func TestReadFileIfExists_TrimsWhitespace(t *testing.T) {
 	}
 }
 
-func TestWriteIfNotEmpty_EmptyContent(t *testing.T) {
+func TestWriteAndCount_EmptyContent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.txt")
 
-	err := writeIfNotEmpty(path, "")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	count := writeAndCount(path, "")
+	if count != 0 {
+		t.Errorf("expected 0, got %d", count)
 	}
 
 	// File should not exist
@@ -55,13 +55,13 @@ func TestWriteIfNotEmpty_EmptyContent(t *testing.T) {
 	}
 }
 
-func TestWriteIfNotEmpty_WritesContent(t *testing.T) {
+func TestWriteAndCount_WritesContent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.txt")
 
-	err := writeIfNotEmpty(path, "content")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	count := writeAndCount(path, "content")
+	if count != 1 {
+		t.Errorf("expected 1, got %d", count)
 	}
 
 	data, err := os.ReadFile(path)
@@ -91,12 +91,10 @@ func TestCountNonEmptyFields_AllFilled(t *testing.T) {
 		PromotionalText: "promo",
 		SupportURL:      "https://support.example.com",
 		MarketingURL:    "https://marketing.example.com",
-		Name:            "My App",
-		Subtitle:        "Best app ever",
 	}
 	count := countNonEmptyFields(loc)
-	if count != 8 {
-		t.Errorf("expected 8, got %d", count)
+	if count != 6 {
+		t.Errorf("expected 6, got %d", count)
 	}
 }
 
