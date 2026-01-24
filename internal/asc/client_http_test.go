@@ -3003,3 +3003,61 @@ func TestCreateSubscriptionAvailability(t *testing.T) {
 		t.Fatalf("CreateSubscriptionAvailability() error: %v", err)
 	}
 }
+
+func TestCreateAppStoreVersion(t *testing.T) {
+	response := jsonResponse(http.StatusCreated, `{"data":{"type":"appStoreVersions","id":"VERSION_123","attributes":{"versionString":"2.0.0","platform":"IOS","appStoreState":"PREPARE_FOR_SUBMISSION"}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/appStoreVersions" {
+			t.Fatalf("expected path /v1/appStoreVersions, got %s", req.URL.Path)
+		}
+		var payload AppStoreVersionCreateRequest
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if payload.Data.Attributes.VersionString != "2.0.0" {
+			t.Fatalf("expected version 2.0.0, got %s", payload.Data.Attributes.VersionString)
+		}
+		if payload.Data.Attributes.Platform != PlatformIOS {
+			t.Fatalf("expected platform IOS, got %s", payload.Data.Attributes.Platform)
+		}
+		if payload.Data.Relationships.App.Data.ID != "APP_123" {
+			t.Fatalf("expected app ID APP_123, got %s", payload.Data.Relationships.App.Data.ID)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	attrs := AppStoreVersionCreateAttributes{
+		Platform:      PlatformIOS,
+		VersionString: "2.0.0",
+	}
+	result, err := client.CreateAppStoreVersion(context.Background(), "APP_123", attrs)
+	if err != nil {
+		t.Fatalf("CreateAppStoreVersion() error: %v", err)
+	}
+	if result.Data.ID != "VERSION_123" {
+		t.Fatalf("expected version ID VERSION_123, got %s", result.Data.ID)
+	}
+	if result.Data.Attributes.VersionString != "2.0.0" {
+		t.Fatalf("expected version string 2.0.0, got %s", result.Data.Attributes.VersionString)
+	}
+}
+
+func TestDeleteAppStoreVersion(t *testing.T) {
+	response := jsonResponse(http.StatusNoContent, ``)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodDelete {
+			t.Fatalf("expected DELETE, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/appStoreVersions/VERSION_123" {
+			t.Fatalf("expected path /v1/appStoreVersions/VERSION_123, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if err := client.DeleteAppStoreVersion(context.Background(), "VERSION_123"); err != nil {
+		t.Fatalf("DeleteAppStoreVersion() error: %v", err)
+	}
+}
