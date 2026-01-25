@@ -7,6 +7,18 @@ import (
 	"strings"
 )
 
+// ReviewSubmissionState represents the state of a review submission.
+type ReviewSubmissionState string
+
+const (
+	ReviewSubmissionStateReadyForReview   ReviewSubmissionState = "READY_FOR_REVIEW"
+	ReviewSubmissionStateWaitingForReview ReviewSubmissionState = "WAITING_FOR_REVIEW"
+	ReviewSubmissionStateInReview         ReviewSubmissionState = "IN_REVIEW"
+	ReviewSubmissionStateUnresolvedIssues ReviewSubmissionState = "UNRESOLVED_ISSUES"
+	ReviewSubmissionStateCanceling        ReviewSubmissionState = "CANCELING"
+	ReviewSubmissionStateComplete         ReviewSubmissionState = "COMPLETE"
+)
+
 // ReviewSubmissionAttributes describes review submission attributes.
 type ReviewSubmissionAttributes struct {
 	Platform        Platform `json:"platform,omitempty"`
@@ -75,6 +87,7 @@ type ReviewSubmissionCreateRequest struct {
 // ReviewSubmissionUpdateAttributes describes attributes for updating a review submission.
 type ReviewSubmissionUpdateAttributes struct {
 	Submitted *bool `json:"submitted,omitempty"`
+	Canceled  *bool `json:"canceled,omitempty"`
 }
 
 // ReviewSubmissionUpdateData is the data portion of a review submission update request.
@@ -148,7 +161,7 @@ func (c *Client) GetReviewSubmission(ctx context.Context, submissionID string) (
 }
 
 // CreateReviewSubmission creates a new review submission.
-func (c *Client) CreateReviewSubmission(ctx context.Context, platform Platform, appID string) (*ReviewSubmissionResponse, error) {
+func (c *Client) CreateReviewSubmission(ctx context.Context, appID string, platform Platform) (*ReviewSubmissionResponse, error) {
 	appID = strings.TrimSpace(appID)
 	if appID == "" {
 		return nil, fmt.Errorf("appID is required")
@@ -227,4 +240,10 @@ func (c *Client) UpdateReviewSubmission(ctx context.Context, submissionID string
 func (c *Client) SubmitReviewSubmission(ctx context.Context, submissionID string) (*ReviewSubmissionResponse, error) {
 	submitted := true
 	return c.UpdateReviewSubmission(ctx, submissionID, ReviewSubmissionUpdateAttributes{Submitted: &submitted})
+}
+
+// CancelReviewSubmission cancels a review submission by ID.
+func (c *Client) CancelReviewSubmission(ctx context.Context, submissionID string) (*ReviewSubmissionResponse, error) {
+	canceled := true
+	return c.UpdateReviewSubmission(ctx, submissionID, ReviewSubmissionUpdateAttributes{Canceled: &canceled})
 }

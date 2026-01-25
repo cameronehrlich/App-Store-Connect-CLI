@@ -45,3 +45,36 @@ Follow idiomatic Go so the code is predictable to anyone who reads Go.
 - Use `UsageFunc` on ffcli commands for consistent help formatting
 - When returning `flag.ErrHelp`, do **not** call `fs.Usage()` manually (avoids duplicate output)
 - Help output is written to stderr by default
+
+## Testing
+
+### Error Checking
+
+- **Do**: Use `errors.Is()` or `errors.As()` for typed errors
+- **Do**: Simply check `err != nil` when only verifying an error occurred
+- **Don't**: Match error strings with `strings.Contains(err.Error(), "...")` - this is fragile
+
+```go
+// Good: Check for specific error type
+var notFoundErr *NotFoundError
+if errors.As(err, &notFoundErr) {
+    // handle not found
+}
+
+// Good: Just verify error occurred
+if err == nil {
+    t.Fatal("expected error, got nil")
+}
+t.Logf("got expected error: %v", err)
+
+// Bad: Fragile string matching
+if !strings.Contains(err.Error(), "not found") {  // DON'T DO THIS
+    t.Fatal("wrong error")
+}
+```
+
+### Test Isolation
+
+- Use `t.TempDir()` for temporary files
+- Use `t.Setenv()` to set environment variables (auto-cleaned up)
+- Isolate from user config by setting `ASC_CONFIG_PATH` to a temp path

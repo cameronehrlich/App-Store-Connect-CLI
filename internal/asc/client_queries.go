@@ -109,6 +109,24 @@ type betaTestersQuery struct {
 	filterBuilds string
 }
 
+type usersQuery struct {
+	listQuery
+	email string
+	roles []string
+}
+
+type userInvitationsQuery struct {
+	listQuery
+}
+
+type territoriesQuery struct {
+	listQuery
+}
+
+type pricePointsQuery struct {
+	listQuery
+	territory string
+}
 func buildReviewQuery(opts []ReviewOption) string {
 	query := &reviewQuery{}
 	for _, opt := range opts {
@@ -220,6 +238,22 @@ func buildBetaTestersQuery(appID string, query *betaTestersQuery) string {
 	return values.Encode()
 }
 
+func buildUsersQuery(query *usersQuery) string {
+	values := url.Values{}
+	if strings.TrimSpace(query.email) != "" {
+		values.Set("filter[username]", strings.TrimSpace(query.email))
+	}
+	addCSV(values, "filter[roles]", query.roles)
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildUserInvitationsQuery(query *userInvitationsQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
 func buildAppStoreVersionsQuery(query *appStoreVersionsQuery) string {
 	values := url.Values{}
 	addCSV(values, "filter[platform]", query.platforms)
@@ -268,6 +302,21 @@ func buildAppStoreVersionLocalizationsQuery(query *appStoreVersionLocalizationsQ
 func buildAppInfoLocalizationsQuery(query *appInfoLocalizationsQuery) string {
 	values := url.Values{}
 	addCSV(values, "filter[locale]", query.locales)
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildTerritoriesQuery(query *territoriesQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildPricePointsQuery(query *pricePointsQuery) string {
+	values := url.Values{}
+	if strings.TrimSpace(query.territory) != "" {
+		values.Set("filter[territory]", strings.TrimSpace(query.territory))
+	}
 	addLimit(values, query.limit)
 	return values.Encode()
 }

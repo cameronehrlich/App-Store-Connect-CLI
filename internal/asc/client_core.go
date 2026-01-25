@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/auth"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/config"
 )
 
 func init() {
@@ -25,13 +26,28 @@ const (
 	BaseURL = "https://api.appstoreconnect.apple.com"
 	// DefaultTimeout is the default request timeout
 	DefaultTimeout = 30 * time.Second
-	tokenLifetime  = 20 * time.Minute
+	// DefaultUploadTimeout is the default timeout for upload operations.
+	DefaultUploadTimeout = 60 * time.Second
+	tokenLifetime        = 20 * time.Minute
 
 	// Retry defaults
 	DefaultMaxRetries = 3
 	DefaultBaseDelay  = 1 * time.Second
 	DefaultMaxDelay   = 30 * time.Second
 )
+
+func loadConfig() *config.Config {
+	cfg, err := config.Load()
+	if err != nil {
+		return nil
+	}
+	return cfg
+}
+
+func envValue(name string) (string, bool) {
+	value, ok := os.LookupEnv(name)
+	return strings.TrimSpace(value), ok
+}
 
 // RetryableError is returned when a request can be retried (e.g., rate limiting).
 type RetryableError struct {
@@ -73,7 +89,7 @@ type RetryOptions struct {
 	MaxDelay   time.Duration // Maximum delay cap
 }
 
-// ResolveRetryOptions returns retry options, optionally overridden by env vars.
+// ResolveRetryOptions returns retry options, optionally overridden by config/env.
 func ResolveRetryOptions() RetryOptions {
 	opts := RetryOptions{
 		MaxRetries: DefaultMaxRetries,
@@ -81,19 +97,47 @@ func ResolveRetryOptions() RetryOptions {
 		MaxDelay:   DefaultMaxDelay,
 	}
 
-	if override := strings.TrimSpace(os.Getenv("ASC_MAX_RETRIES")); override != "" {
-		if parsed, err := strconv.Atoi(override); err == nil && parsed >= 0 {
-			opts.MaxRetries = parsed
+	cfg := loadConfig()
+
+	if override, ok := envValue("ASC_MAX_RETRIES"); ok {
+		if override != "" {
+			if parsed, err := strconv.Atoi(override); err == nil && parsed >= 0 {
+				opts.MaxRetries = parsed
+			}
+		}
+	} else if cfg != nil {
+		if override := strings.TrimSpace(cfg.MaxRetries); override != "" {
+			if parsed, err := strconv.Atoi(override); err == nil && parsed >= 0 {
+				opts.MaxRetries = parsed
+			}
 		}
 	}
-	if override := strings.TrimSpace(os.Getenv("ASC_BASE_DELAY")); override != "" {
-		if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
-			opts.BaseDelay = parsed
+
+	if override, ok := envValue("ASC_BASE_DELAY"); ok {
+		if override != "" {
+			if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
+				opts.BaseDelay = parsed
+			}
+		}
+	} else if cfg != nil {
+		if override := strings.TrimSpace(cfg.BaseDelay); override != "" {
+			if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
+				opts.BaseDelay = parsed
+			}
 		}
 	}
-	if override := strings.TrimSpace(os.Getenv("ASC_MAX_DELAY")); override != "" {
-		if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
-			opts.MaxDelay = parsed
+
+	if override, ok := envValue("ASC_MAX_DELAY"); ok {
+		if override != "" {
+			if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
+				opts.MaxDelay = parsed
+			}
+		}
+	} else if cfg != nil {
+		if override := strings.TrimSpace(cfg.MaxDelay); override != "" {
+			if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
+				opts.MaxDelay = parsed
+			}
 		}
 	}
 	return opts
@@ -173,25 +217,71 @@ func WithRetry[T any](ctx context.Context, fn func() (T, error), opts RetryOptio
 }
 
 func shouldLogRetries() bool {
-	return strings.TrimSpace(os.Getenv("ASC_RETRY_LOG")) != ""
+	if override, ok := envValue("ASC_RETRY_LOG"); ok {
+		return override != ""
+	}
+	cfg := loadConfig()
+	if cfg == nil {
+		return false
+	}
+	return strings.TrimSpace(cfg.RetryLog) != ""
 }
 
-// ResolveTimeout returns the request timeout, optionally overridden by env vars.
+// ResolveTimeout returns the request timeout, optionally overridden by config/env.
 func ResolveTimeout() time.Duration {
 	return ResolveTimeoutWithDefault(DefaultTimeout)
+}
+
+// ResolveUploadTimeout returns the upload timeout, optionally overridden by config/env.
+func ResolveUploadTimeout() time.Duration {
+	cfg := loadConfig()
+	uploadTimeout := ""
+	uploadTimeoutSeconds := ""
+	if cfg != nil {
+		uploadTimeout = cfg.UploadTimeout
+		uploadTimeoutSeconds = cfg.UploadTimeoutSeconds
+	}
+	return resolveTimeoutWithDefaultAndEnv(DefaultUploadTimeout, "ASC_UPLOAD_TIMEOUT", "ASC_UPLOAD_TIMEOUT_SECONDS", uploadTimeout, uploadTimeoutSeconds)
 }
 
 // ResolveTimeoutWithDefault returns the request timeout using a custom default.
 // ASC_TIMEOUT and ASC_TIMEOUT_SECONDS override the default when set.
 func ResolveTimeoutWithDefault(defaultTimeout time.Duration) time.Duration {
+	cfg := loadConfig()
+	timeout := ""
+	timeoutSeconds := ""
+	if cfg != nil {
+		timeout = cfg.Timeout
+		timeoutSeconds = cfg.TimeoutSeconds
+	}
+	return resolveTimeoutWithDefaultAndEnv(defaultTimeout, "ASC_TIMEOUT", "ASC_TIMEOUT_SECONDS", timeout, timeoutSeconds)
+}
+
+func resolveTimeoutWithDefaultAndEnv(defaultTimeout time.Duration, durationEnv, secondsEnv, durationConfig, secondsConfig string) time.Duration {
 	timeout := defaultTimeout
-	if override := strings.TrimSpace(os.Getenv("ASC_TIMEOUT")); override != "" {
+	if override, ok := envValue(durationEnv); ok {
+		if override != "" {
+			if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
+				timeout = parsed
+			}
+		}
+		return timeout
+	}
+	if override, ok := envValue(secondsEnv); ok {
+		if override != "" {
+			if parsed, err := strconv.Atoi(override); err == nil && parsed > 0 {
+				timeout = time.Duration(parsed) * time.Second
+			}
+		}
+		return timeout
+	}
+	if override := strings.TrimSpace(durationConfig); override != "" {
 		if parsed, err := time.ParseDuration(override); err == nil && parsed > 0 {
 			timeout = parsed
 		}
-	} else if override := strings.TrimSpace(os.Getenv("ASC_TIMEOUT_SECONDS")); override != "" {
-		if parsed, err := time.ParseDuration(override + "s"); err == nil && parsed > 0 {
-			timeout = parsed
+	} else if override := strings.TrimSpace(secondsConfig); override != "" {
+		if parsed, err := strconv.Atoi(override); err == nil && parsed > 0 {
+			timeout = time.Duration(parsed) * time.Second
 		}
 	}
 	return timeout

@@ -7,6 +7,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -389,10 +390,115 @@ func TestBetaManagementValidationErrors(t *testing.T) {
 	}
 }
 
+func TestUsersValidationErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "users get missing id",
+			args:    []string{"users", "get"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "users update missing id",
+			args:    []string{"users", "update", "--roles", "ADMIN"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "users update missing roles",
+			args:    []string{"users", "update", "--id", "USER_ID"},
+			wantErr: "--roles is required",
+		},
+		{
+			name:    "users delete missing confirm",
+			args:    []string{"users", "delete", "--id", "USER_ID"},
+			wantErr: "--confirm is required",
+		},
+		{
+			name:    "users delete missing id",
+			args:    []string{"users", "delete", "--confirm"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "users invite missing email",
+			args:    []string{"users", "invite", "--first-name", "Jane", "--last-name", "Doe", "--roles", "ADMIN", "--all-apps"},
+			wantErr: "--email is required",
+		},
+		{
+			name:    "users invite missing first name",
+			args:    []string{"users", "invite", "--email", "user@example.com", "--last-name", "Doe", "--roles", "ADMIN", "--all-apps"},
+			wantErr: "--first-name is required",
+		},
+		{
+			name:    "users invite missing last name",
+			args:    []string{"users", "invite", "--email", "user@example.com", "--first-name", "Jane", "--roles", "ADMIN", "--all-apps"},
+			wantErr: "--last-name is required",
+		},
+		{
+			name:    "users invite missing roles",
+			args:    []string{"users", "invite", "--email", "user@example.com", "--first-name", "Jane", "--last-name", "Doe", "--all-apps"},
+			wantErr: "--roles is required",
+		},
+		{
+			name:    "users invite missing access",
+			args:    []string{"users", "invite", "--email", "user@example.com", "--first-name", "Jane", "--last-name", "Doe", "--roles", "ADMIN"},
+			wantErr: "--all-apps or --visible-app is required",
+		},
+		{
+			name:    "users invite conflicting access",
+			args:    []string{"users", "invite", "--email", "user@example.com", "--first-name", "Jane", "--last-name", "Doe", "--roles", "ADMIN", "--all-apps", "--visible-app", "APP_ID"},
+			wantErr: "--all-apps and --visible-app cannot be used together",
+		},
+		{
+			name:    "users invites get missing id",
+			args:    []string{"users", "invites", "get"},
+			wantErr: "--id is required",
+		},
+		{
+			name:    "users invites revoke missing confirm",
+			args:    []string{"users", "invites", "revoke", "--id", "INVITE_ID"},
+			wantErr: "--confirm is required",
+		},
+		{
+			name:    "users invites revoke missing id",
+			args:    []string{"users", "invites", "revoke", "--confirm"},
+			wantErr: "--id is required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				err := root.Run(context.Background())
+				if !errors.Is(err, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", err)
+				}
+			})
+
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if !strings.Contains(stderr, test.wantErr) {
+				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			}
+		})
+	}
+}
+
 func TestTestFlightAppsValidationErrors(t *testing.T) {
 	t.Setenv("ASC_KEY_ID", "")
 	t.Setenv("ASC_ISSUER_ID", "")
 	t.Setenv("ASC_PRIVATE_KEY_PATH", "")
+	// Isolate from user's config file
+	t.Setenv("ASC_CONFIG_PATH", filepath.Join(t.TempDir(), "nonexistent.json"))
 
 	tests := []struct {
 		name     string
@@ -692,6 +798,71 @@ func TestBuildsUploadValidationErrors(t *testing.T) {
 			name:    "missing ipa",
 			args:    []string{"builds", "upload", "--app", "APP_123", "--version", "1.0.0", "--build-number", "123"},
 			wantErr: "Error: --ipa is required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				err := root.Run(context.Background())
+				if !errors.Is(err, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", err)
+				}
+			})
+
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if !strings.Contains(stderr, test.wantErr) {
+				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			}
+		})
+	}
+}
+
+func TestPublishValidationErrors(t *testing.T) {
+	t.Setenv("ASC_APP_ID", "")
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "publish testflight missing app",
+			args:    []string{"publish", "testflight", "--ipa", "app.ipa", "--group", "GROUP_ID"},
+			wantErr: "Error: --app is required",
+		},
+		{
+			name:    "publish testflight missing ipa",
+			args:    []string{"publish", "testflight", "--app", "APP_123", "--group", "GROUP_ID"},
+			wantErr: "Error: --ipa is required",
+		},
+		{
+			name:    "publish testflight missing group",
+			args:    []string{"publish", "testflight", "--app", "APP_123", "--ipa", "app.ipa"},
+			wantErr: "Error: --group is required",
+		},
+		{
+			name:    "publish appstore missing app",
+			args:    []string{"publish", "appstore", "--ipa", "app.ipa", "--version", "1.0.0"},
+			wantErr: "Error: --app is required",
+		},
+		{
+			name:    "publish appstore missing ipa",
+			args:    []string{"publish", "appstore", "--app", "APP_123", "--version", "1.0.0"},
+			wantErr: "Error: --ipa is required",
+		},
+		{
+			name:    "publish appstore submit missing confirm",
+			args:    []string{"publish", "appstore", "--app", "APP_123", "--ipa", "app.ipa", "--version", "1.0.0", "--submit"},
+			wantErr: "Error: --confirm is required with --submit",
 		},
 	}
 

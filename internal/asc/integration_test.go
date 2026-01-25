@@ -175,7 +175,7 @@ func TestIntegrationEndpoints(t *testing.T) {
 		for _, item := range sorted.Data {
 			feedbackDates = append(feedbackDates, item.Attributes.CreatedDate)
 		}
-		assertSortedByCreatedDateDesc(t, feedbackDates)
+		assertSortedByDateDesc(t, feedbackDates)
 	})
 
 	t.Run("crashes", func(t *testing.T) {
@@ -328,7 +328,7 @@ func TestIntegrationEndpoints(t *testing.T) {
 		for _, item := range sorted.Data {
 			crashDates = append(crashDates, item.Attributes.CreatedDate)
 		}
-		assertSortedByCreatedDateDesc(t, crashDates)
+		assertSortedByDateDesc(t, crashDates)
 	})
 
 	t.Run("reviews", func(t *testing.T) {
@@ -435,7 +435,7 @@ func TestIntegrationEndpoints(t *testing.T) {
 		for _, item := range sorted.Data {
 			reviewDates = append(reviewDates, item.Attributes.CreatedDate)
 		}
-		assertSortedByCreatedDateDesc(t, reviewDates)
+		assertSortedByDateDesc(t, reviewDates)
 	})
 
 	t.Run("builds", func(t *testing.T) {
@@ -498,8 +498,10 @@ func TestIntegrationEndpoints(t *testing.T) {
 		for _, item := range sorted.Data {
 			uploadedDates = append(uploadedDates, item.Attributes.UploadedDate)
 		}
-		assertSortedByCreatedDateDesc(t, uploadedDates)
+		assertSortedByDateDesc(t, uploadedDates)
 
+		// Note: ExpireBuild is a destructive operation that cannot be undone.
+		// Only run this test with ASC_EXPIRE_BUILD_ID set to a build you want to expire.
 		if expireID := os.Getenv("ASC_EXPIRE_BUILD_ID"); expireID != "" {
 			expireCtx, expireCancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer expireCancel()
@@ -514,6 +516,77 @@ func TestIntegrationEndpoints(t *testing.T) {
 				t.Fatalf("expected build %q to be expired", expireID)
 			}
 		}
+	})
+}
+
+// TestIntegrationErrorHandling tests API error responses for invalid inputs.
+func TestIntegrationErrorHandling(t *testing.T) {
+	keyID := os.Getenv("ASC_KEY_ID")
+	issuerID := os.Getenv("ASC_ISSUER_ID")
+	keyPath := os.Getenv("ASC_PRIVATE_KEY_PATH")
+
+	if keyID == "" || issuerID == "" || keyPath == "" {
+		t.Skip("integration tests require ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY_PATH")
+	}
+
+	client, err := NewClient(keyID, issuerID, keyPath)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	t.Run("invalid_app_id_feedback", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		_, err := client.GetFeedback(ctx, "invalid-app-id-12345")
+		if err == nil {
+			t.Fatal("expected error for invalid app ID, got nil")
+		}
+		t.Logf("got expected error: %v", err)
+	})
+
+	t.Run("invalid_app_id_builds", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		_, err := client.GetBuilds(ctx, "invalid-app-id-12345")
+		if err == nil {
+			t.Fatal("expected error for invalid app ID, got nil")
+		}
+		t.Logf("got expected error: %v", err)
+	})
+
+	t.Run("invalid_build_id", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		_, err := client.GetBuild(ctx, "invalid-build-id-12345")
+		if err == nil {
+			t.Fatal("expected error for invalid build ID, got nil")
+		}
+		t.Logf("got expected error: %v", err)
+	})
+
+	t.Run("invalid_app_id_reviews", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		_, err := client.GetReviews(ctx, "invalid-app-id-12345")
+		if err == nil {
+			t.Fatal("expected error for invalid app ID, got nil")
+		}
+		t.Logf("got expected error: %v", err)
+	})
+
+	t.Run("invalid_app_id_crashes", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		_, err := client.GetCrashes(ctx, "invalid-app-id-12345")
+		if err == nil {
+			t.Fatal("expected error for invalid app ID, got nil")
+		}
+		t.Logf("got expected error: %v", err)
 	})
 }
 
@@ -544,7 +617,9 @@ func assertASCLink(t *testing.T, link string) {
 	}
 }
 
-func assertSortedByCreatedDateDesc(t *testing.T, values []string) {
+// assertSortedByDateDesc verifies dates are in descending order.
+// Works for any date field (createdDate, uploadedDate, etc.)
+func assertSortedByDateDesc(t *testing.T, values []string) {
 	t.Helper()
 	if len(values) < 2 {
 		return
@@ -555,7 +630,7 @@ func assertSortedByCreatedDateDesc(t *testing.T, values []string) {
 	}
 	for i := 0; i < len(parsed)-1; i++ {
 		if parsed[i].Before(parsed[i+1]) {
-			t.Fatalf("expected createdDate in descending order, got %s before %s", parsed[i], parsed[i+1])
+			t.Fatalf("expected dates in descending order, got %s before %s", parsed[i], parsed[i+1])
 		}
 	}
 }

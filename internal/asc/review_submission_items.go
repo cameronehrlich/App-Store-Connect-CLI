@@ -211,3 +211,9 @@ func (c *Client) DeleteReviewSubmissionItem(ctx context.Context, itemID string) 
 	_, err := c.do(ctx, "DELETE", path, nil)
 	return err
 }
+
+// AddReviewSubmissionItem adds an app store version to a review submission.
+// This is a convenience wrapper around CreateReviewSubmissionItem for adding app store versions.
+func (c *Client) AddReviewSubmissionItem(ctx context.Context, submissionID, versionID string) (*ReviewSubmissionItemResponse, error) {
+	return c.CreateReviewSubmissionItem(ctx, submissionID, ReviewSubmissionItemTypeAppStoreVersion, versionID)
+}

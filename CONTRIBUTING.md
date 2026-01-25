@@ -54,8 +54,9 @@ asc crashes --app "$ASC_APP_ID"
 asc reviews --app "$ASC_APP_ID"
 ```
 
-Credentials are stored in the system keychain when available, with a local config fallback at
-`~/.asc/config.json` (restricted permissions). Do not commit secrets.
+Credentials are stored in the system keychain when available, with a config fallback at
+`~/.asc/config.json` (restricted permissions). A repo-local `./.asc/config.json` is also supported.
+Do not commit secrets.
 
 ## Pull Request Guidelines
 

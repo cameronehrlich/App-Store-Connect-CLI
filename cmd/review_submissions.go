@@ -208,7 +208,7 @@ Examples:
 			requestCtx, cancel := contextWithTimeout(ctx)
 			defer cancel()
 
-			resp, err := client.CreateReviewSubmission(requestCtx, asc.Platform(normalizedPlatform), resolvedAppID)
+			resp, err := client.CreateReviewSubmission(requestCtx, resolvedAppID, asc.Platform(normalizedPlatform))
 			if err != nil {
 				return fmt.Errorf("review-submissions create: %w", err)
 			}

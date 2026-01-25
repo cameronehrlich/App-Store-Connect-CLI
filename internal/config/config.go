@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
-	configDirName  = ".asc"
-	configFileName = "config.json"
+	configDirName    = ".asc"
+	configFileName   = "config.json"
+	configPathEnvVar = "ASC_CONFIG_PATH"
 )
 
 // Config holds the application configuration
@@ -18,6 +20,19 @@ type Config struct {
 	IssuerID       string `json:"issuer_id"`
 	PrivateKeyPath string `json:"private_key_path"`
 	DefaultKeyName string `json:"default_key_name"`
+	AppID          string `json:"app_id"`
+
+	VendorNumber          string `json:"vendor_number"`
+	AnalyticsVendorNumber string `json:"analytics_vendor_number"`
+
+	Timeout              string `json:"timeout"`
+	TimeoutSeconds       string `json:"timeout_seconds"`
+	UploadTimeout        string `json:"upload_timeout"`
+	UploadTimeoutSeconds string `json:"upload_timeout_seconds"`
+	MaxRetries           string `json:"max_retries"`
+	BaseDelay            string `json:"base_delay"`
+	MaxDelay             string `json:"max_delay"`
+	RetryLog             string `json:"retry_log"`
 }
 
 // ErrNotFound is returned when the config file doesn't exist
@@ -41,11 +56,126 @@ func configPath() (string, error) {
 	return filepath.Join(dir, configFileName), nil
 }
 
+// GlobalPath returns the global configuration file path.
+func GlobalPath() (string, error) {
+	return configPath()
+}
+
+// Path returns the active configuration file path.
+func Path() (string, error) {
+	return resolvePath()
+}
+
+// LocalPath returns the local configuration file path.
+func LocalPath() (string, error) {
+	baseDir, err := localConfigBaseDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(baseDir, configDirName, configFileName), nil
+}
+
+func resolvePath() (string, error) {
+	if envPath := strings.TrimSpace(os.Getenv(configPathEnvVar)); envPath != "" {
+		return filepath.Clean(envPath), nil
+	}
+
+	localPath, err := findLocalConfigPath()
+	if err != nil {
+		return "", err
+	}
+	if localPath != "" {
+		return localPath, nil
+	}
+
+	return GlobalPath()
+}
+
+func findLocalConfigPath() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	for {
+		candidate := filepath.Join(dir, configDirName, configFileName)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		} else if !os.IsNotExist(err) {
+			return "", fmt.Errorf("failed to stat config: %w", err)
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", nil
+		}
+		dir = parent
+	}
+}
+
+func localConfigBaseDir() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	dir := cwd
+	for {
+		ascDir := filepath.Join(dir, configDirName)
+		if info, err := os.Stat(ascDir); err == nil {
+			if info.IsDir() {
+				return dir, nil
+			}
+		} else if !os.IsNotExist(err) {
+			return "", fmt.Errorf("failed to stat %s: %w", ascDir, err)
+		}
+
+		gitEntry := filepath.Join(dir, ".git")
+		if _, err := os.Stat(gitEntry); err == nil {
+			return dir, nil
+		} else if !os.IsNotExist(err) {
+			return "", fmt.Errorf("failed to stat %s: %w", gitEntry, err)
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return cwd, nil
+		}
+		dir = parent
+	}
+}
+
 // Load loads the configuration from the config file
 func Load() (*Config, error) {
-	path, err := configPath()
+	path, err := Path()
 	if err != nil {
 		return nil, err
+	}
+	return LoadAt(path)
+}
+
+// Save saves the configuration to the config file
+func Save(cfg *Config) error {
+	path, err := Path()
+	if err != nil {
+		return err
+	}
+	return SaveAt(path, cfg)
+}
+
+// Remove removes the config file
+func Remove() error {
+	path, err := Path()
+	if err != nil {
+		return err
+	}
+	return RemoveAt(path)
+}
+
+// LoadAt loads the configuration from the provided path.
+func LoadAt(path string) (*Config, error) {
+	if strings.TrimSpace(path) == "" {
+		return nil, fmt.Errorf("failed to read config: empty path")
 	}
 
 	data, err := os.ReadFile(path)
@@ -64,21 +194,15 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
-// Save saves the configuration to the config file
-func Save(cfg *Config) error {
-	dir, err := configDir()
-	if err != nil {
-		return err
+// SaveAt saves the configuration to the provided path.
+func SaveAt(path string, cfg *Config) error {
+	if strings.TrimSpace(path) == "" {
+		return fmt.Errorf("failed to write config: empty path")
 	}
 
-	// Create config directory if it doesn't exist
+	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	path, err := configPath()
-	if err != nil {
-		return err
 	}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
@@ -93,11 +217,10 @@ func Save(cfg *Config) error {
 	return nil
 }
 
-// Remove removes the config file
-func Remove() error {
-	path, err := configPath()
-	if err != nil {
-		return err
+// RemoveAt removes the config file at the provided path.
+func RemoveAt(path string) error {
+	if strings.TrimSpace(path) == "" {
+		return fmt.Errorf("failed to remove config: empty path")
 	}
 
 	if err := os.Remove(path); err != nil {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/auth"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/config"
 )
 
 // ANSI escape codes for bold text
@@ -131,7 +132,10 @@ func getASCClient() (*asc.Client, error) {
 	}
 
 	if actualKeyID == "" || actualIssuerID == "" || actualKeyPath == "" {
-		return nil, fmt.Errorf("missing authentication. Run 'asc auth login'")
+		if path, err := config.Path(); err == nil {
+			return nil, fmt.Errorf("missing authentication. Run 'asc auth login' or create %s (see 'asc auth init')", path)
+		}
+		return nil, fmt.Errorf("missing authentication. Run 'asc auth login' or 'asc auth init'")
 	}
 
 	return asc.NewClient(actualKeyID, actualIssuerID, actualKeyPath)
@@ -164,7 +168,14 @@ func resolveAppID(appID string) string {
 	if appID != "" {
 		return appID
 	}
-	return os.Getenv("ASC_APP_ID")
+	if env, ok := os.LookupEnv("ASC_APP_ID"); ok {
+		return strings.TrimSpace(env)
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cfg.AppID)
 }
 
 func contextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
@@ -172,6 +183,13 @@ func contextWithTimeout(ctx context.Context) (context.Context, context.CancelFun
 		ctx = context.Background()
 	}
 	return context.WithTimeout(ctx, asc.ResolveTimeout())
+}
+
+func contextWithUploadTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithTimeout(ctx, asc.ResolveUploadTimeout())
 }
 
 func splitCSV(value string) []string {

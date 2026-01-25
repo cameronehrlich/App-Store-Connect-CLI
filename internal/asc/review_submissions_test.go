@@ -73,7 +73,7 @@ func TestCreateReviewSubmission(t *testing.T) {
 		}
 	}, response)
 
-	resp, err := client.CreateReviewSubmission(context.Background(), PlatformIOS, "app-123")
+	resp, err := client.CreateReviewSubmission(context.Background(), "app-123", PlatformIOS)
 	if err != nil {
 		t.Fatalf("CreateReviewSubmission() error: %v", err)
 	}
@@ -239,11 +239,11 @@ func TestReviewSubmissionValidationErrors(t *testing.T) {
 		t.Fatalf("expected submissionID required error, got %v", err)
 	}
 
-	if _, err := client.CreateReviewSubmission(context.Background(), PlatformIOS, ""); err == nil || !strings.Contains(err.Error(), "appID is required") {
+	if _, err := client.CreateReviewSubmission(context.Background(), "", PlatformIOS); err == nil || !strings.Contains(err.Error(), "appID is required") {
 		t.Fatalf("expected appID required error, got %v", err)
 	}
 
-	if _, err := client.CreateReviewSubmission(context.Background(), "", "app-123"); err == nil || !strings.Contains(err.Error(), "platform is required") {
+	if _, err := client.CreateReviewSubmission(context.Background(), "app-123", ""); err == nil || !strings.Contains(err.Error(), "platform is required") {
 		t.Fatalf("expected platform required error, got %v", err)
 	}
 

@@ -46,16 +46,41 @@ asc auth login \
   --key-id "ABC123" \
   --issuer-id "DEF456" \
   --private-key /path/to/AuthKey.p8
+
+# Create a template config.json (global, no secrets)
+asc auth init
+
+# Create a repo-local config.json
+asc auth init --local
+
+# Store credentials in global config.json (bypass keychain)
+asc auth login \
+  --bypass-keychain \
+  --name "MyApp" \
+  --key-id "ABC123" \
+  --issuer-id "DEF456" \
+  --private-key /path/to/AuthKey.p8
+
+# Store credentials in repo-local config.json
+asc auth login \
+  --bypass-keychain \
+  --local \
+  --name "MyApp" \
+  --key-id "ABC123" \
+  --issuer-id "DEF456" \
+  --private-key /path/to/AuthKey.p8
 ```
 
 Generate API keys at: https://appstoreconnect.apple.com/access/integrations/api
 
-Credentials are stored in the system keychain when available, with a local config fallback
-at `~/.asc/config.json` (restricted permissions).
+Credentials are stored in the system keychain when available, with a config fallback
+at `~/.asc/config.json` (restricted permissions). A repo-local `./.asc/config.json`
+takes precedence when present. Override with `ASC_CONFIG_PATH`.
 Environment variable fallback:
 - `ASC_KEY_ID`
 - `ASC_ISSUER_ID`
 - `ASC_PRIVATE_KEY_PATH`
+- `ASC_CONFIG_PATH`
 
 App ID fallback:
 - `ASC_APP_ID`
@@ -65,6 +90,8 @@ Analytics & sales env:
 - `ASC_ANALYTICS_VENDOR_NUMBER` (fallback for analytics vendor number)
 - `ASC_TIMEOUT` (e.g., `90s`, `2m`)
 - `ASC_TIMEOUT_SECONDS` (e.g., `120`)
+- `ASC_UPLOAD_TIMEOUT` (e.g., `60s`, `2m`)
+- `ASC_UPLOAD_TIMEOUT_SECONDS` (e.g., `120`)
 
 Retry behavior env:
 - `ASC_MAX_RETRIES` (default: 3) for GET/HEAD requests
@@ -72,6 +99,17 @@ Retry behavior env:
 - `ASC_MAX_DELAY` (default: `30s`)
 - `ASC_RETRY_LOG=1` to log retries to stderr
 - Retry errors include `retry after` in the final error message when available
+
+Config.json keys (same semantics, snake_case):
+- `app_id`
+- `vendor_number`
+- `analytics_vendor_number`
+- `timeout`, `timeout_seconds`
+- `upload_timeout`, `upload_timeout_seconds`
+- `max_retries`
+- `base_delay`
+- `max_delay`
+- `retry_log` (set to `1` or `true` to enable)
 
 ## Commands
 
@@ -406,6 +444,18 @@ asc builds add-groups --build "BUILD_ID" --group "GROUP_ID"
 asc builds remove-groups --build "BUILD_ID" --group "GROUP_ID"
 ```
 
+### Categories
+
+```bash
+# List all App Store categories
+asc categories list
+asc categories list --output table
+
+# Set primary and secondary categories for an app
+asc categories set --app "123456789" --primary GAMES
+asc categories set --app "123456789" --primary GAMES --secondary ENTERTAINMENT
+```
+
 ### Versions
 
 ```bash
@@ -479,6 +529,31 @@ asc build-localizations delete --id "LOCALIZATION_ID" --confirm
 # Fetch a localization by ID
 asc build-localizations get --id "LOCALIZATION_ID"
 ```
+
+### Migrate (Fastlane Compatibility)
+
+Validate and migrate metadata between ASC's `.strings` format and Fastlane directory structure.
+
+```bash
+# Validate metadata against App Store Connect character limits (offline)
+asc migrate validate --fastlane-dir ./metadata
+
+# Import metadata from fastlane format to App Store Connect
+asc migrate import --app "123456789" --fastlane-dir ./metadata
+
+# Export metadata from App Store Connect to fastlane format
+asc migrate export --app "123456789" --output ./exported-metadata
+```
+
+**Character limits validated:**
+| Field | Limit |
+|-------|-------|
+| Description | 4000 chars |
+| Keywords | 100 chars |
+| What's New | 4000 chars |
+| Promotional Text | 170 chars |
+| Name | 30 chars |
+| Subtitle | 30 chars |
 
 ### Submit
 
@@ -606,5 +681,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  Built with Go and Claude Code
+  Primarily Built with Cursor and GPT-5.2 Codex Extra High, with MiniMax M2.1 and Claude Code for Implementation
 </p>

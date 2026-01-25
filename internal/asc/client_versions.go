@@ -16,6 +16,51 @@ type AppStoreVersionAttributes struct {
 	CreatedDate     string   `json:"createdDate,omitempty"`
 }
 
+// AppStoreVersionCreateAttributes describes app store version create payload attributes.
+type AppStoreVersionCreateAttributes struct {
+	Platform      Platform `json:"platform"`
+	VersionString string   `json:"versionString"`
+	Copyright     string   `json:"copyright,omitempty"`
+	ReleaseType   string   `json:"releaseType,omitempty"`
+}
+
+// AppStoreVersionUpdateAttributes describes app store version update payload attributes.
+type AppStoreVersionUpdateAttributes struct {
+	Copyright           *string `json:"copyright,omitempty"`
+	ReleaseType         *string `json:"releaseType,omitempty"`
+	EarliestReleaseDate *string `json:"earliestReleaseDate,omitempty"`
+	VersionString       *string `json:"versionString,omitempty"`
+}
+
+// AppStoreVersionUpdateData is the data portion of an app store version update request.
+type AppStoreVersionUpdateData struct {
+	Type       ResourceType                    `json:"type"`
+	ID         string                          `json:"id"`
+	Attributes AppStoreVersionUpdateAttributes `json:"attributes"`
+}
+
+// AppStoreVersionUpdateRequest is a request to update an app store version.
+type AppStoreVersionUpdateRequest struct {
+	Data AppStoreVersionUpdateData `json:"data"`
+}
+
+// AppStoreVersionCreateRelationships describes relationships for app store version create requests.
+type AppStoreVersionCreateRelationships struct {
+	App *Relationship `json:"app"`
+}
+
+// AppStoreVersionCreateData is the data portion of an app store version create request.
+type AppStoreVersionCreateData struct {
+	Type          ResourceType                        `json:"type"`
+	Attributes    AppStoreVersionCreateAttributes     `json:"attributes"`
+	Relationships *AppStoreVersionCreateRelationships `json:"relationships"`
+}
+
+// AppStoreVersionCreateRequest is a request to create an app store version.
+type AppStoreVersionCreateRequest struct {
+	Data AppStoreVersionCreateData `json:"data"`
+}
+
 // AppStoreVersionsResponse is the response from app store versions endpoints.
 type AppStoreVersionsResponse = Response[AppStoreVersionAttributes]
 
@@ -187,6 +232,78 @@ func (c *Client) GetAppStoreVersion(ctx context.Context, versionID string) (*App
 	}
 
 	return &response, nil
+}
+
+// CreateAppStoreVersion creates a new app store version for an app.
+func (c *Client) CreateAppStoreVersion(ctx context.Context, appID string, attrs AppStoreVersionCreateAttributes) (*AppStoreVersionResponse, error) {
+	payload := AppStoreVersionCreateRequest{
+		Data: AppStoreVersionCreateData{
+			Type:       ResourceTypeAppStoreVersions,
+			Attributes: attrs,
+			Relationships: &AppStoreVersionCreateRelationships{
+				App: &Relationship{
+					Data: ResourceData{
+						Type: ResourceTypeApps,
+						ID:   strings.TrimSpace(appID),
+					},
+				},
+			},
+		},
+	}
+
+	body, err := BuildRequestBody(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := c.do(ctx, "POST", "/v1/appStoreVersions", body)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppStoreVersionResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// UpdateAppStoreVersion updates an existing app store version.
+func (c *Client) UpdateAppStoreVersion(ctx context.Context, versionID string, attrs AppStoreVersionUpdateAttributes) (*AppStoreVersionResponse, error) {
+	payload := AppStoreVersionUpdateRequest{
+		Data: AppStoreVersionUpdateData{
+			Type:       ResourceTypeAppStoreVersions,
+			ID:         strings.TrimSpace(versionID),
+			Attributes: attrs,
+		},
+	}
+
+	body, err := BuildRequestBody(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/v1/appStoreVersions/%s", strings.TrimSpace(versionID))
+	data, err := c.do(ctx, "PATCH", path, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppStoreVersionResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// DeleteAppStoreVersion deletes an app store version.
+// Only versions in PREPARE_FOR_SUBMISSION state can be deleted.
+func (c *Client) DeleteAppStoreVersion(ctx context.Context, versionID string) error {
+	path := fmt.Sprintf("/v1/appStoreVersions/%s", strings.TrimSpace(versionID))
+	_, err := c.do(ctx, "DELETE", path, nil)
+	return err
 }
 
 // AttachBuildToVersion attaches a build to an app store version.

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/config"
 )
 
 const analyticsMaxLimit = 200
@@ -23,10 +24,25 @@ func resolveVendorNumber(value string) string {
 	if strings.TrimSpace(value) != "" {
 		return strings.TrimSpace(value)
 	}
-	if env := strings.TrimSpace(os.Getenv("ASC_VENDOR_NUMBER")); env != "" {
-		return env
+	vendorEnv, vendorSet := os.LookupEnv("ASC_VENDOR_NUMBER")
+	analyticsEnv, analyticsSet := os.LookupEnv("ASC_ANALYTICS_VENDOR_NUMBER")
+	if vendorSet || analyticsSet {
+		if env := strings.TrimSpace(vendorEnv); env != "" {
+			return env
+		}
+		if env := strings.TrimSpace(analyticsEnv); env != "" {
+			return env
+		}
+		return ""
 	}
-	return strings.TrimSpace(os.Getenv("ASC_ANALYTICS_VENDOR_NUMBER"))
+	cfg, err := config.Load()
+	if err != nil {
+		return ""
+	}
+	if value := strings.TrimSpace(cfg.VendorNumber); value != "" {
+		return value
+	}
+	return strings.TrimSpace(cfg.AnalyticsVendorNumber)
 }
 
 func normalizeSalesReportType(value string) (asc.SalesReportType, error) {

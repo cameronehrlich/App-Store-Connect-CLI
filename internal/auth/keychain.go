@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/99designs/keyring"
@@ -163,23 +164,75 @@ func StoreCredentials(name, keyID, issuerID, keyPath string) error {
 	return storeInConfig(name, payload)
 }
 
+// StoreCredentialsConfig stores credentials in the config file only.
+func StoreCredentialsConfig(name, keyID, issuerID, keyPath string) error {
+	payload := credentialPayload{
+		KeyID:          keyID,
+		IssuerID:       issuerID,
+		PrivateKeyPath: keyPath,
+	}
+	path, err := config.GlobalPath()
+	if err != nil {
+		return err
+	}
+	return storeInConfigAt(name, payload, path)
+}
+
+// StoreCredentialsConfigAt stores credentials in the specified config file.
+func StoreCredentialsConfigAt(name, keyID, issuerID, keyPath, configPath string) error {
+	payload := credentialPayload{
+		KeyID:          keyID,
+		IssuerID:       issuerID,
+		PrivateKeyPath: keyPath,
+	}
+	return storeInConfigAt(name, payload, configPath)
+}
+
 // clearConfigCredentials clears credentials from the config file.
 // This is called after successfully migrating to keychain storage.
 func clearConfigCredentials() error {
-	cfg, err := config.Load()
+	activePath, err := config.Path()
+	if err != nil {
+		return err
+	}
+	globalPath, err := config.GlobalPath()
+	if err != nil {
+		return err
+	}
+	if err := clearConfigCredentialsAt(activePath); err != nil && !errors.Is(err, config.ErrNotFound) {
+		return err
+	}
+	if !sameConfigPath(activePath, globalPath) {
+		if err := clearConfigCredentialsAt(globalPath); err != nil && !errors.Is(err, config.ErrNotFound) {
+			return err
+		}
+	}
+	return nil
+}
+
+func clearConfigCredentialsAt(path string) error {
+	cfg, err := config.LoadAt(path)
 	if err != nil {
 		return err
 	}
 	cfg.KeyID = ""
 	cfg.IssuerID = ""
 	cfg.PrivateKeyPath = ""
-	return config.Save(cfg)
+	return config.SaveAt(path, cfg)
 }
 
 // ListCredentials lists all stored credentials
 func ListCredentials() ([]Credential, error) {
 	credentials, err := listFromKeychain()
 	if err == nil {
+		if len(credentials) > 0 {
+			return credentials, nil
+		}
+		// Keychain available but empty - also check config (for --bypass-keychain case)
+		configCreds, configErr := listFromConfig()
+		if configErr == nil && len(configCreds) > 0 {
+			return configCreds, nil
+		}
 		return credentials, nil
 	}
 	if !isKeyringUnavailable(err) {
@@ -222,11 +275,17 @@ func RemoveCredentials(name string) error {
 func RemoveAllCredentials() error {
 	if err := removeAllFromKeychain(); err == nil {
 		_ = removeAllFromLegacyKeychain()
-		return config.Remove()
+		// Clear config credentials but preserve other settings (app_id, timeout, etc.)
+		return clearConfigCredentials()
 	} else if !isKeyringUnavailable(err) {
 		return err
 	}
-	return config.Remove()
+	// Clear config credentials but preserve other settings
+	return clearConfigCredentials()
+}
+
+func sameConfigPath(left, right string) bool {
+	return filepath.Clean(left) == filepath.Clean(right)
 }
 
 // GetDefaultCredentials returns the default credentials
@@ -250,7 +309,11 @@ func GetDefaultCredentials() (*config.Config, error) {
 				}, nil
 			}
 		}
-		return nil, fmt.Errorf("default credentials not found in keychain")
+		// Keychain available but credentials not found - also check config (for --bypass-keychain case)
+		if cfg, configErr := getDefaultFromConfig(); configErr == nil {
+			return cfg, nil
+		}
+		return nil, fmt.Errorf("default credentials not found")
 	}
 	if !isKeyringUnavailable(err) {
 		return nil, err
@@ -441,7 +504,15 @@ func removeAllFromLegacyKeychain() error {
 }
 
 func storeInConfig(name string, payload credentialPayload) error {
-	cfg, err := config.Load()
+	path, err := config.Path()
+	if err != nil {
+		return err
+	}
+	return storeInConfigAt(name, payload, path)
+}
+
+func storeInConfigAt(name string, payload credentialPayload, configPath string) error {
+	cfg, err := config.LoadAt(configPath)
 	if err != nil && err != config.ErrNotFound {
 		return err
 	}
@@ -452,7 +523,29 @@ func storeInConfig(name string, payload credentialPayload) error {
 	cfg.IssuerID = payload.IssuerID
 	cfg.PrivateKeyPath = payload.PrivateKeyPath
 	cfg.DefaultKeyName = name
-	return config.Save(cfg)
+	return config.SaveAt(configPath, cfg)
+}
+
+func hasCompleteCredentials(cfg *config.Config) bool {
+	return cfg != nil && cfg.KeyID != "" && cfg.IssuerID != "" && cfg.PrivateKeyPath != ""
+}
+
+func hasAnyCredentials(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	return cfg.KeyID != "" || cfg.IssuerID != "" || cfg.PrivateKeyPath != ""
+}
+
+func loadGlobalConfigForCredentials() (*config.Config, error) {
+	if strings.TrimSpace(os.Getenv("ASC_CONFIG_PATH")) != "" {
+		return nil, config.ErrNotFound
+	}
+	path, err := config.GlobalPath()
+	if err != nil {
+		return nil, err
+	}
+	return config.LoadAt(path)
 }
 
 func listFromConfig() ([]Credential, error) {
@@ -462,6 +555,25 @@ func listFromConfig() ([]Credential, error) {
 			return []Credential{}, nil
 		}
 		return nil, err
+	}
+	if !hasCompleteCredentials(cfg) {
+		if hasAnyCredentials(cfg) {
+			return []Credential{}, nil
+		}
+		globalCfg, err := loadGlobalConfigForCredentials()
+		if err != nil {
+			if err == config.ErrNotFound {
+				return []Credential{}, nil
+			}
+			return nil, err
+		}
+		if !hasCompleteCredentials(globalCfg) {
+			return []Credential{}, nil
+		}
+		cfg = globalCfg
+	}
+	if cfg.KeyID == "" || cfg.IssuerID == "" || cfg.PrivateKeyPath == "" {
+		return []Credential{}, nil
 	}
 	credentials := []Credential{
 		{
@@ -481,10 +593,28 @@ func listFromConfig() ([]Credential, error) {
 func getDefaultFromConfig() (*config.Config, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		return nil, err
+		if err != config.ErrNotFound {
+			return nil, err
+		}
 	}
-	if cfg.KeyID == "" || cfg.IssuerID == "" || cfg.PrivateKeyPath == "" {
-		return nil, fmt.Errorf("incomplete credentials")
+	if !hasCompleteCredentials(cfg) {
+		if hasAnyCredentials(cfg) {
+			return nil, fmt.Errorf("incomplete credentials")
+		}
+		globalCfg, globalErr := loadGlobalConfigForCredentials()
+		if globalErr != nil {
+			if globalErr == config.ErrNotFound {
+				if err == config.ErrNotFound {
+					return nil, err
+				}
+				return nil, fmt.Errorf("incomplete credentials")
+			}
+			return nil, globalErr
+		}
+		if !hasCompleteCredentials(globalCfg) {
+			return nil, fmt.Errorf("incomplete credentials")
+		}
+		cfg = globalCfg
 	}
 	return cfg, nil
 }

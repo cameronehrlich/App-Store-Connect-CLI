@@ -12,7 +12,7 @@ This file covers patterns for AI agents working on the codebase.
 - Rebase on `main` before merging; avoid merge commits
 - Commit small, coherent changes; no WIP commits on shared branches
 - Use concise, present-tense commit messages that match repo style
-- Never commit secrets or local config files (keys, `.env`, `config.json`)
+- Never commit secrets or local config files (keys, `.env`, `.asc/config.json`)
 
 ## Before Committing
 

@@ -29,8 +29,18 @@ func PrintMarkdown(data interface{}) error {
 		return printReviewsMarkdown(v)
 	case *AppsResponse:
 		return printAppsMarkdown(v)
+	case *AppCategoriesResponse:
+		return printAppCategoriesMarkdown(v)
 	case *AppResponse:
 		return printAppsMarkdown(&AppsResponse{Data: []Resource[AppAttributes]{v.Data}})
+	case *TerritoriesResponse:
+		return printTerritoriesMarkdown(v)
+	case *AppPricePointsV3Response:
+		return printAppPricePointsMarkdown(v)
+	case *AppPriceScheduleResponse:
+		return printAppPriceScheduleMarkdown(v)
+	case *AppPricesResponse:
+		return printAppPricesMarkdown(v)
 	case *BuildsResponse:
 		return printBuildsMarkdown(v)
 	case *AppStoreVersionsResponse:
@@ -39,6 +49,10 @@ func PrintMarkdown(data interface{}) error {
 		return printPreReleaseVersionsMarkdown(v)
 	case *BuildResponse:
 		return printBuildsMarkdown(&BuildsResponse{Data: []Resource[BuildAttributes]{v.Data}})
+	case *AppAvailabilityV2Response:
+		return printAppAvailabilityMarkdown(v)
+	case *TerritoryAvailabilitiesResponse:
+		return printTerritoryAvailabilitiesMarkdown(v)
 	case *PreReleaseVersionResponse:
 		return printPreReleaseVersionsMarkdown(&PreReleaseVersionsResponse{Data: []PreReleaseVersion{v.Data}})
 	case *AppStoreVersionLocalizationsResponse:
@@ -55,6 +69,18 @@ func PrintMarkdown(data interface{}) error {
 		return printBetaTestersMarkdown(v)
 	case *BetaTesterResponse:
 		return printBetaTesterMarkdown(v)
+	case *UsersResponse:
+		return printUsersMarkdown(v)
+	case *UserResponse:
+		return printUsersMarkdown(&UsersResponse{Data: []Resource[UserAttributes]{v.Data}})
+	case *UserInvitationsResponse:
+		return printUserInvitationsMarkdown(v)
+	case *UserInvitationResponse:
+		return printUserInvitationsMarkdown(&UserInvitationsResponse{Data: []Resource[UserInvitationAttributes]{v.Data}})
+	case *UserDeleteResult:
+		return printUserDeleteResultMarkdown(v)
+	case *UserInvitationRevokeResult:
+		return printUserInvitationRevokeResultMarkdown(v)
 	case *SandboxTestersResponse:
 		return printSandboxTestersMarkdown(v)
 	case *SandboxTesterResponse:
@@ -65,6 +91,10 @@ func PrintMarkdown(data interface{}) error {
 		return printLocalizationUploadResultMarkdown(v)
 	case *BuildUploadResult:
 		return printBuildUploadResultMarkdown(v)
+	case *TestFlightPublishResult:
+		return printTestFlightPublishResultMarkdown(v)
+	case *AppStorePublishResult:
+		return printAppStorePublishResultMarkdown(v)
 	case *SalesReportResult:
 		return printSalesReportResultMarkdown(v)
 	case *FinanceReportResult:
@@ -131,6 +161,8 @@ func PrintMarkdown(data interface{}) error {
 		return printCiWorkflowsMarkdown(v)
 	case *CiBuildRunsResponse:
 		return printCiBuildRunsMarkdown(v)
+	case *CiBuildActionsResponse:
+		return printCiBuildActionsMarkdown(v)
 	case *CustomerReviewResponseResponse:
 		return printCustomerReviewResponseMarkdown(v)
 	case *CustomerReviewResponseDeleteResult:
@@ -151,8 +183,18 @@ func PrintTable(data interface{}) error {
 		return printReviewsTable(v)
 	case *AppsResponse:
 		return printAppsTable(v)
+	case *AppCategoriesResponse:
+		return printAppCategoriesTable(v)
 	case *AppResponse:
 		return printAppsTable(&AppsResponse{Data: []Resource[AppAttributes]{v.Data}})
+	case *TerritoriesResponse:
+		return printTerritoriesTable(v)
+	case *AppPricePointsV3Response:
+		return printAppPricePointsTable(v)
+	case *AppPriceScheduleResponse:
+		return printAppPriceScheduleTable(v)
+	case *AppPricesResponse:
+		return printAppPricesTable(v)
 	case *BuildsResponse:
 		return printBuildsTable(v)
 	case *AppStoreVersionsResponse:
@@ -161,6 +203,10 @@ func PrintTable(data interface{}) error {
 		return printPreReleaseVersionsTable(v)
 	case *BuildResponse:
 		return printBuildsTable(&BuildsResponse{Data: []Resource[BuildAttributes]{v.Data}})
+	case *AppAvailabilityV2Response:
+		return printAppAvailabilityTable(v)
+	case *TerritoryAvailabilitiesResponse:
+		return printTerritoryAvailabilitiesTable(v)
 	case *PreReleaseVersionResponse:
 		return printPreReleaseVersionsTable(&PreReleaseVersionsResponse{Data: []PreReleaseVersion{v.Data}})
 	case *AppStoreVersionLocalizationsResponse:
@@ -177,6 +223,18 @@ func PrintTable(data interface{}) error {
 		return printBetaTestersTable(v)
 	case *BetaTesterResponse:
 		return printBetaTesterTable(v)
+	case *UsersResponse:
+		return printUsersTable(v)
+	case *UserResponse:
+		return printUsersTable(&UsersResponse{Data: []Resource[UserAttributes]{v.Data}})
+	case *UserInvitationsResponse:
+		return printUserInvitationsTable(v)
+	case *UserInvitationResponse:
+		return printUserInvitationsTable(&UserInvitationsResponse{Data: []Resource[UserInvitationAttributes]{v.Data}})
+	case *UserDeleteResult:
+		return printUserDeleteResultTable(v)
+	case *UserInvitationRevokeResult:
+		return printUserInvitationRevokeResultTable(v)
 	case *SandboxTestersResponse:
 		return printSandboxTestersTable(v)
 	case *SandboxTesterResponse:
@@ -187,6 +245,10 @@ func PrintTable(data interface{}) error {
 		return printLocalizationUploadResultTable(v)
 	case *BuildUploadResult:
 		return printBuildUploadResultTable(v)
+	case *TestFlightPublishResult:
+		return printTestFlightPublishResultTable(v)
+	case *AppStorePublishResult:
+		return printAppStorePublishResultTable(v)
 	case *SalesReportResult:
 		return printSalesReportResultTable(v)
 	case *FinanceReportResult:
@@ -253,6 +315,8 @@ func PrintTable(data interface{}) error {
 		return printCiWorkflowsTable(v)
 	case *CiBuildRunsResponse:
 		return printCiBuildRunsTable(v)
+	case *CiBuildActionsResponse:
+		return printCiBuildActionsTable(v)
 	case *CustomerReviewResponseResponse:
 		return printCustomerReviewResponseTable(v)
 	case *CustomerReviewResponseDeleteResult:
