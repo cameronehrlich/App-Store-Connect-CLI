@@ -172,7 +172,7 @@ func resolveAppID(appID string) string {
 		return strings.TrimSpace(env)
 	}
 	cfg, err := config.Load()
-	if err != nil {
+	if err != nil || cfg == nil {
 		return ""
 	}
 	return strings.TrimSpace(cfg.AppID)

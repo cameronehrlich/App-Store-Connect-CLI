@@ -16,11 +16,6 @@ import (
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/config"
 )
 
-func init() {
-	// Seed the random number generator for jitter
-	rand.Seed(time.Now().UnixNano())
-}
-
 const (
 	// BaseURL is the App Store Connect API base URL
 	BaseURL = "https://api.appstoreconnect.apple.com"
@@ -28,7 +23,9 @@ const (
 	DefaultTimeout = 30 * time.Second
 	// DefaultUploadTimeout is the default timeout for upload operations.
 	DefaultUploadTimeout = 60 * time.Second
-	tokenLifetime        = 20 * time.Minute
+	// tokenLifetime is the JWT token lifetime for App Store Connect API authentication.
+	// 10 minutes is a good balance between security (shorter-lived tokens) and usability.
+	tokenLifetime = 10 * time.Minute
 
 	// Retry defaults
 	DefaultMaxRetries = 3
