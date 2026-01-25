@@ -63,3 +63,82 @@ func WithAppCategoriesLimit(limit int) AppCategoriesOption {
 		q.limit = limit
 	}
 }
+
+// AppInfoUpdateCategoriesRelationships describes relationships for updating categories.
+type AppInfoUpdateCategoriesRelationships struct {
+	PrimaryCategory             *Relationship `json:"primaryCategory,omitempty"`
+	SecondaryCategory           *Relationship `json:"secondaryCategory,omitempty"`
+	PrimarySubcategoryOne       *Relationship `json:"primarySubcategoryOne,omitempty"`
+	PrimarySubcategoryTwo       *Relationship `json:"primarySubcategoryTwo,omitempty"`
+	SecondarySubcategoryOne     *Relationship `json:"secondarySubcategoryOne,omitempty"`
+	SecondarySubcategoryTwo     *Relationship `json:"secondarySubcategoryTwo,omitempty"`
+}
+
+// AppInfoUpdateCategoriesData is the data for updating app info categories.
+type AppInfoUpdateCategoriesData struct {
+	Type          ResourceType                          `json:"type"`
+	ID            string                                `json:"id"`
+	Relationships *AppInfoUpdateCategoriesRelationships `json:"relationships,omitempty"`
+}
+
+// AppInfoUpdateCategoriesRequest is a request to update app info categories.
+type AppInfoUpdateCategoriesRequest struct {
+	Data AppInfoUpdateCategoriesData `json:"data"`
+}
+
+// AppInfoResponse is the response from updating app info.
+type AppInfoResponse struct {
+	Data struct {
+		Type       ResourceType       `json:"type"`
+		ID         string             `json:"id"`
+		Attributes AppInfoAttributes  `json:"attributes,omitempty"`
+	} `json:"data"`
+}
+
+// UpdateAppInfoCategories updates the categories for an app info resource.
+func (c *Client) UpdateAppInfoCategories(ctx context.Context, appInfoID string, primaryCategoryID, secondaryCategoryID string) (*AppInfoResponse, error) {
+	relationships := &AppInfoUpdateCategoriesRelationships{}
+
+	if primaryCategoryID != "" {
+		relationships.PrimaryCategory = &Relationship{
+			Data: ResourceData{
+				Type: ResourceTypeAppCategories,
+				ID:   primaryCategoryID,
+			},
+		}
+	}
+
+	if secondaryCategoryID != "" {
+		relationships.SecondaryCategory = &Relationship{
+			Data: ResourceData{
+				Type: ResourceTypeAppCategories,
+				ID:   secondaryCategoryID,
+			},
+		}
+	}
+
+	request := AppInfoUpdateCategoriesRequest{
+		Data: AppInfoUpdateCategoriesData{
+			Type:          ResourceTypeAppInfos,
+			ID:            appInfoID,
+			Relationships: relationships,
+		},
+	}
+
+	body, err := BuildRequestBody(request)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := c.do(ctx, "PATCH", fmt.Sprintf("/v1/appInfos/%s", appInfoID), body)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppInfoResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}

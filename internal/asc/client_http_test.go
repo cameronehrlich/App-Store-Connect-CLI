@@ -3108,3 +3108,86 @@ func TestGetAppCategories(t *testing.T) {
 		t.Fatalf("expected first category GAMES, got %s", result.Data[0].ID)
 	}
 }
+
+func TestUpdateAppInfoCategories(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"appInfos","id":"app-info-1","attributes":{}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodPatch {
+			t.Fatalf("expected PATCH, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/appInfos/app-info-1" {
+			t.Fatalf("expected path /v1/appInfos/app-info-1, got %s", req.URL.Path)
+		}
+
+		// Verify request body
+		body, _ := io.ReadAll(req.Body)
+		var payload struct {
+			Data struct {
+				Type          string `json:"type"`
+				ID            string `json:"id"`
+				Relationships struct {
+					PrimaryCategory   *Relationship `json:"primaryCategory"`
+					SecondaryCategory *Relationship `json:"secondaryCategory"`
+				} `json:"relationships"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("failed to parse request body: %v", err)
+		}
+		if payload.Data.Type != "appInfos" {
+			t.Fatalf("expected type appInfos, got %s", payload.Data.Type)
+		}
+		if payload.Data.ID != "app-info-1" {
+			t.Fatalf("expected id app-info-1, got %s", payload.Data.ID)
+		}
+		if payload.Data.Relationships.PrimaryCategory == nil {
+			t.Fatal("expected primaryCategory relationship")
+		}
+		if payload.Data.Relationships.PrimaryCategory.Data.ID != "GAMES" {
+			t.Fatalf("expected primaryCategory GAMES, got %s", payload.Data.Relationships.PrimaryCategory.Data.ID)
+		}
+		if payload.Data.Relationships.SecondaryCategory == nil {
+			t.Fatal("expected secondaryCategory relationship")
+		}
+		if payload.Data.Relationships.SecondaryCategory.Data.ID != "ENTERTAINMENT" {
+			t.Fatalf("expected secondaryCategory ENTERTAINMENT, got %s", payload.Data.Relationships.SecondaryCategory.Data.ID)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	result, err := client.UpdateAppInfoCategories(context.Background(), "app-info-1", "GAMES", "ENTERTAINMENT")
+	if err != nil {
+		t.Fatalf("UpdateAppInfoCategories() error: %v", err)
+	}
+	if result.Data.ID != "app-info-1" {
+		t.Fatalf("expected id app-info-1, got %s", result.Data.ID)
+	}
+}
+
+func TestUpdateAppInfoCategories_PrimaryOnly(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"appInfos","id":"app-info-1","attributes":{}}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		var payload struct {
+			Data struct {
+				Relationships struct {
+					PrimaryCategory   *Relationship `json:"primaryCategory"`
+					SecondaryCategory *Relationship `json:"secondaryCategory"`
+				} `json:"relationships"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("failed to parse request body: %v", err)
+		}
+		if payload.Data.Relationships.PrimaryCategory == nil {
+			t.Fatal("expected primaryCategory relationship")
+		}
+		if payload.Data.Relationships.SecondaryCategory != nil {
+			t.Fatal("expected no secondaryCategory relationship when empty")
+		}
+	}, response)
+
+	if _, err := client.UpdateAppInfoCategories(context.Background(), "app-info-1", "GAMES", ""); err != nil {
+		t.Fatalf("UpdateAppInfoCategories() error: %v", err)
+	}
+}
