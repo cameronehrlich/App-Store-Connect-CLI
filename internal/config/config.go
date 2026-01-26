@@ -107,13 +107,22 @@ func parseDurationValue(raw string) (time.Duration, error) {
 	return time.Duration(seconds) * time.Second, nil
 }
 
-// Config holds the application configuration
-type Config struct {
+// Credential stores a named API credential in config.json.
+type Credential struct {
+	Name           string `json:"name"`
 	KeyID          string `json:"key_id"`
 	IssuerID       string `json:"issuer_id"`
 	PrivateKeyPath string `json:"private_key_path"`
-	DefaultKeyName string `json:"default_key_name"`
-	AppID          string `json:"app_id"`
+}
+
+// Config holds the application configuration
+type Config struct {
+	KeyID          string       `json:"key_id"`
+	IssuerID       string       `json:"issuer_id"`
+	PrivateKeyPath string       `json:"private_key_path"`
+	DefaultKeyName string       `json:"default_key_name"`
+	Keys           []Credential `json:"keys,omitempty"`
+	AppID          string       `json:"app_id"`
 
 	VendorNumber          string `json:"vendor_number"`
 	AnalyticsVendorNumber string `json:"analytics_vendor_number"`

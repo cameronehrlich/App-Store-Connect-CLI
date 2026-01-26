@@ -23,6 +23,10 @@ var (
 	reset = "\033[22m"
 )
 
+const profileEnvVar = "ASC_PROFILE"
+
+var selectedProfile string
+
 // Bold returns the string wrapped in ANSI bold codes
 func Bold(s string) string {
 	if !supportsANSI() {
@@ -125,10 +129,11 @@ func DefaultUsageFunc(c *ffcli.Command) string {
 
 func getASCClient() (*asc.Client, error) {
 	var actualKeyID, actualIssuerID, actualKeyPath string
+	profile := resolveProfileName()
 
 	// Priority 1: Keychain credentials (explicit user setup via 'asc auth login')
 	if strings.TrimSpace(os.Getenv("ASC_BYPASS_KEYCHAIN")) == "" {
-		cfg, err := auth.GetDefaultCredentials()
+		cfg, err := auth.GetCredentials(profile)
 		if err == nil && cfg != nil {
 			actualKeyID = cfg.KeyID
 			actualIssuerID = cfg.IssuerID
@@ -155,6 +160,16 @@ func getASCClient() (*asc.Client, error) {
 	}
 
 	return asc.NewClient(actualKeyID, actualIssuerID, actualKeyPath)
+}
+
+func resolveProfileName() string {
+	if strings.TrimSpace(selectedProfile) != "" {
+		return strings.TrimSpace(selectedProfile)
+	}
+	if value := strings.TrimSpace(os.Getenv(profileEnvVar)); value != "" {
+		return value
+	}
+	return ""
 }
 
 func printOutput(data interface{}, format string, pretty bool) error {

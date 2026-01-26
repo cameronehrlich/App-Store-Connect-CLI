@@ -87,6 +87,18 @@ asc auth login \
   --issuer-id "DEF456" \
   --private-key /path/to/AuthKey.p8
 
+# Add another profile and switch defaults
+asc auth login \
+  --name "ClientApp" \
+  --key-id "XYZ789" \
+  --issuer-id "LMN000" \
+  --private-key /path/to/ClientAuthKey.p8
+
+asc auth switch --name "ClientApp"
+
+# Use a profile for a single command
+asc --profile "ClientApp" apps list
+
 # Create a template config.json (global, no secrets)
 asc auth init
 
@@ -126,6 +138,7 @@ Environment variable fallback:
 - `ASC_ISSUER_ID`
 - `ASC_PRIVATE_KEY_PATH`
 - `ASC_CONFIG_PATH`
+- `ASC_PROFILE`
 - `ASC_BYPASS_KEYCHAIN` (ignore keychain and use config/env auth)
 
 App ID fallback:

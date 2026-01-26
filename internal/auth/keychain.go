@@ -169,8 +169,8 @@ func StoreCredentials(name, keyID, issuerID, keyPath string) error {
 	}
 
 	if err := storeInKeychain(name, payload); err == nil {
-		// Successfully stored in keychain - clean up config file for security
-		if err := clearConfigCredentials(); err != nil && !errors.Is(err, config.ErrNotFound) {
+		// Successfully stored in keychain - remove matching config entry for security
+		if err := removeFromConfigIfPresent(name); err != nil && !errors.Is(err, config.ErrNotFound) {
 			// Log but don't fail - keychain is the authoritative storage
 			_ = err
 		}
@@ -236,6 +236,8 @@ func clearConfigCredentialsAt(path string) error {
 	cfg.KeyID = ""
 	cfg.IssuerID = ""
 	cfg.PrivateKeyPath = ""
+	cfg.DefaultKeyName = ""
+	cfg.Keys = nil
 	return config.SaveAt(path, cfg)
 }
 
@@ -246,15 +248,23 @@ func ListCredentials() ([]Credential, error) {
 	}
 	credentials, err := listFromKeychain()
 	if err == nil {
-		if len(credentials) > 0 {
-			return credentials, nil
-		}
-		// Keychain available but empty - also check config (for --bypass-keychain case)
 		configCreds, configErr := listFromConfig()
-		if configErr == nil && len(configCreds) > 0 {
-			return configCreds, nil
+		if configErr != nil {
+			return nil, configErr
 		}
-		return credentials, nil
+		merged := make([]Credential, 0, len(credentials)+len(configCreds))
+		seen := make(map[string]struct{}, len(credentials))
+		for _, cred := range credentials {
+			merged = append(merged, cred)
+			seen[cred.Name] = struct{}{}
+		}
+		for _, cred := range configCreds {
+			if _, ok := seen[cred.Name]; ok {
+				continue
+			}
+			merged = append(merged, cred)
+		}
+		return merged, nil
 	}
 	if !isKeyringUnavailable(err) {
 		return nil, err
@@ -265,6 +275,10 @@ func ListCredentials() ([]Credential, error) {
 
 // RemoveCredentials removes a named credential.
 func RemoveCredentials(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("credential name is required")
+	}
 	err := removeFromKeychain(name)
 	if err == nil {
 		_ = removeFromLegacyKeychain(name)
@@ -285,7 +299,7 @@ func RemoveCredentials(name string) error {
 			if err := removeFromConfigIfPresent(name); err != nil {
 				return err
 			}
-			return keyring.ErrKeyNotFound
+			return nil
 		}
 		return legacyErr
 	}
@@ -309,40 +323,100 @@ func sameConfigPath(left, right string) bool {
 	return filepath.Clean(left) == filepath.Clean(right)
 }
 
-// GetDefaultCredentials returns the default credentials
+// GetDefaultCredentials returns the default credentials.
 func GetDefaultCredentials() (*config.Config, error) {
+	return GetCredentials("")
+}
+
+// GetCredentials returns credentials for a named profile.
+func GetCredentials(profile string) (*config.Config, error) {
+	profile = strings.TrimSpace(profile)
 	if shouldBypassKeychain() {
-		return getDefaultFromConfig()
+		return getCredentialsFromConfig(profile)
 	}
+
 	credentials, err := listFromKeychain()
 	if err == nil {
-		name, err := defaultName()
+		cfg, found, err := selectCredential(profile, credentials)
 		if err != nil {
 			return nil, err
 		}
-		if name == "" && len(credentials) == 1 {
-			name = credentials[0].Name
-		}
-		for _, cred := range credentials {
-			if cred.Name == name {
-				return &config.Config{
-					KeyID:          cred.KeyID,
-					IssuerID:       cred.IssuerID,
-					PrivateKeyPath: cred.PrivateKeyPath,
-					DefaultKeyName: cred.Name,
-				}, nil
-			}
-		}
-		// Keychain available but credentials not found - also check config (for --bypass-keychain case)
-		if cfg, configErr := getDefaultFromConfig(); configErr == nil {
+		if found {
 			return cfg, nil
+		}
+		// Keychain available but profile not found - also check config.
+		if cfg, configErr := getCredentialsFromConfig(profile); configErr == nil {
+			return cfg, nil
+		}
+		if profile != "" {
+			return nil, fmt.Errorf("credentials not found for profile %q", profile)
 		}
 		return nil, fmt.Errorf("default credentials not found")
 	}
 	if !isKeyringUnavailable(err) {
 		return nil, err
 	}
-	return getDefaultFromConfig()
+	return getCredentialsFromConfig(profile)
+}
+
+func selectCredential(profile string, credentials []Credential) (*config.Config, bool, error) {
+	name := strings.TrimSpace(profile)
+	if name == "" {
+		defaultKey, err := defaultName()
+		if err != nil {
+			return nil, false, err
+		}
+		name = strings.TrimSpace(defaultKey)
+		if name == "" && len(credentials) == 1 {
+			name = credentials[0].Name
+		}
+	}
+	if name == "" {
+		return nil, false, nil
+	}
+	for _, cred := range credentials {
+		if cred.Name == name {
+			return &config.Config{
+				KeyID:          cred.KeyID,
+				IssuerID:       cred.IssuerID,
+				PrivateKeyPath: cred.PrivateKeyPath,
+				DefaultKeyName: cred.Name,
+			}, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
+func getCredentialsFromConfig(profile string) (*config.Config, error) {
+	cfg, err := config.Load()
+	if err != nil && err != config.ErrNotFound {
+		return nil, err
+	}
+	if cfg != nil {
+		selected, selectErr := selectConfigCredential(cfg, profile)
+		if selectErr == nil {
+			return selected, nil
+		}
+		if hasAnyCredentials(cfg) {
+			return nil, selectErr
+		}
+	}
+
+	globalCfg, globalErr := loadGlobalConfigForCredentials()
+	if globalErr != nil {
+		if globalErr == config.ErrNotFound {
+			if err == config.ErrNotFound {
+				return nil, err
+			}
+			return nil, fmt.Errorf("default credentials not found")
+		}
+		return nil, globalErr
+	}
+	selected, selectErr := selectConfigCredential(globalCfg, profile)
+	if selectErr != nil {
+		return nil, selectErr
+	}
+	return selected, nil
 }
 
 func isKeyringUnavailable(err error) bool {
@@ -543,6 +617,28 @@ func storeInConfigAt(name string, payload credentialPayload, configPath string) 
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
+
+	name = strings.TrimSpace(name)
+	updated := false
+	for i, cred := range cfg.Keys {
+		if strings.TrimSpace(cred.Name) == name {
+			cfg.Keys[i].Name = name
+			cfg.Keys[i].KeyID = payload.KeyID
+			cfg.Keys[i].IssuerID = payload.IssuerID
+			cfg.Keys[i].PrivateKeyPath = payload.PrivateKeyPath
+			updated = true
+			break
+		}
+	}
+	if !updated {
+		cfg.Keys = append(cfg.Keys, config.Credential{
+			Name:           name,
+			KeyID:          payload.KeyID,
+			IssuerID:       payload.IssuerID,
+			PrivateKeyPath: payload.PrivateKeyPath,
+		})
+	}
+
 	cfg.KeyID = payload.KeyID
 	cfg.IssuerID = payload.IssuerID
 	cfg.PrivateKeyPath = payload.PrivateKeyPath
@@ -551,14 +647,168 @@ func storeInConfigAt(name string, payload credentialPayload, configPath string) 
 }
 
 func hasCompleteCredentials(cfg *config.Config) bool {
-	return cfg != nil && cfg.KeyID != "" && cfg.IssuerID != "" && cfg.PrivateKeyPath != ""
+	return len(configCredentialList(cfg)) > 0
 }
 
 func hasAnyCredentials(cfg *config.Config) bool {
 	if cfg == nil {
 		return false
 	}
-	return cfg.KeyID != "" || cfg.IssuerID != "" || cfg.PrivateKeyPath != ""
+	if strings.TrimSpace(cfg.KeyID) != "" ||
+		strings.TrimSpace(cfg.IssuerID) != "" ||
+		strings.TrimSpace(cfg.PrivateKeyPath) != "" {
+		return true
+	}
+	for _, cred := range cfg.Keys {
+		if strings.TrimSpace(cred.Name) != "" ||
+			strings.TrimSpace(cred.KeyID) != "" ||
+			strings.TrimSpace(cred.IssuerID) != "" ||
+			strings.TrimSpace(cred.PrivateKeyPath) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func isCompleteConfigCredential(cred config.Credential) bool {
+	return strings.TrimSpace(cred.KeyID) != "" &&
+		strings.TrimSpace(cred.IssuerID) != "" &&
+		strings.TrimSpace(cred.PrivateKeyPath) != ""
+}
+
+func hasLegacyCredentials(cfg *config.Config) bool {
+	return cfg != nil &&
+		strings.TrimSpace(cfg.KeyID) != "" &&
+		strings.TrimSpace(cfg.IssuerID) != "" &&
+		strings.TrimSpace(cfg.PrivateKeyPath) != ""
+}
+
+func configCredentialList(cfg *config.Config) []config.Credential {
+	if cfg == nil {
+		return nil
+	}
+	credentials := make([]config.Credential, 0, len(cfg.Keys)+1)
+	seen := make(map[string]struct{})
+	for _, cred := range cfg.Keys {
+		name := strings.TrimSpace(cred.Name)
+		if name == "" || !isCompleteConfigCredential(cred) {
+			continue
+		}
+		cred.Name = name
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		credentials = append(credentials, cred)
+	}
+
+	if hasLegacyCredentials(cfg) {
+		name := strings.TrimSpace(cfg.DefaultKeyName)
+		if name == "" {
+			name = "default"
+		}
+		if _, ok := seen[name]; !ok {
+			credentials = append(credentials, config.Credential{
+				Name:           name,
+				KeyID:          cfg.KeyID,
+				IssuerID:       cfg.IssuerID,
+				PrivateKeyPath: cfg.PrivateKeyPath,
+			})
+		}
+	}
+
+	return credentials
+}
+
+func findConfigCredential(cfg *config.Config, name string) (config.Credential, bool, bool) {
+	if cfg == nil {
+		return config.Credential{}, false, false
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return config.Credential{}, false, false
+	}
+	for _, cred := range cfg.Keys {
+		if strings.TrimSpace(cred.Name) != name {
+			continue
+		}
+		cred.Name = name
+		return cred, true, isCompleteConfigCredential(cred)
+	}
+	legacyName := strings.TrimSpace(cfg.DefaultKeyName)
+	if legacyName == "" {
+		legacyName = "default"
+	}
+	if name == legacyName && (strings.TrimSpace(cfg.KeyID) != "" ||
+		strings.TrimSpace(cfg.IssuerID) != "" ||
+		strings.TrimSpace(cfg.PrivateKeyPath) != "") {
+		cred := config.Credential{
+			Name:           legacyName,
+			KeyID:          cfg.KeyID,
+			IssuerID:       cfg.IssuerID,
+			PrivateKeyPath: cfg.PrivateKeyPath,
+		}
+		return cred, true, isCompleteConfigCredential(cred)
+	}
+	return config.Credential{}, false, false
+}
+
+func applyConfigCredential(cfg *config.Config, cred config.Credential) *config.Config {
+	if cfg == nil {
+		return &config.Config{
+			KeyID:          cred.KeyID,
+			IssuerID:       cred.IssuerID,
+			PrivateKeyPath: cred.PrivateKeyPath,
+			DefaultKeyName: strings.TrimSpace(cred.Name),
+		}
+	}
+	copied := *cfg
+	copied.KeyID = cred.KeyID
+	copied.IssuerID = cred.IssuerID
+	copied.PrivateKeyPath = cred.PrivateKeyPath
+	if strings.TrimSpace(cred.Name) != "" {
+		copied.DefaultKeyName = strings.TrimSpace(cred.Name)
+	}
+	return &copied
+}
+
+func selectConfigCredential(cfg *config.Config, profile string) (*config.Config, error) {
+	if cfg == nil {
+		return nil, config.ErrNotFound
+	}
+
+	profile = strings.TrimSpace(profile)
+	if profile != "" {
+		cred, found, complete := findConfigCredential(cfg, profile)
+		if !found {
+			return nil, fmt.Errorf("credentials not found for profile %q", profile)
+		}
+		if !complete {
+			return nil, fmt.Errorf("incomplete credentials for profile %q", profile)
+		}
+		return applyConfigCredential(cfg, cred), nil
+	}
+
+	defaultName := strings.TrimSpace(cfg.DefaultKeyName)
+	if defaultName != "" {
+		cred, found, complete := findConfigCredential(cfg, defaultName)
+		if !found {
+			return nil, fmt.Errorf("default credentials not found")
+		}
+		if !complete {
+			return nil, fmt.Errorf("incomplete credentials for profile %q", defaultName)
+		}
+		return applyConfigCredential(cfg, cred), nil
+	}
+
+	credentials := configCredentialList(cfg)
+	if len(credentials) == 1 {
+		return applyConfigCredential(cfg, credentials[0]), nil
+	}
+	if hasAnyCredentials(cfg) {
+		return nil, fmt.Errorf("default credentials not found")
+	}
+	return nil, config.ErrNotFound
 }
 
 func loadGlobalConfigForCredentials() (*config.Config, error) {
@@ -596,51 +846,37 @@ func listFromConfig() ([]Credential, error) {
 		}
 		cfg = globalCfg
 	}
-	if cfg.KeyID == "" || cfg.IssuerID == "" || cfg.PrivateKeyPath == "" {
+	configCreds := configCredentialList(cfg)
+	if len(configCreds) == 0 {
 		return []Credential{}, nil
 	}
-	credentials := []Credential{
-		{
-			Name:           cfg.DefaultKeyName,
-			KeyID:          cfg.KeyID,
-			IssuerID:       cfg.IssuerID,
-			PrivateKeyPath: cfg.PrivateKeyPath,
-			IsDefault:      true,
-		},
+	defaultName := strings.TrimSpace(cfg.DefaultKeyName)
+	if defaultName == "" && len(configCreds) == 1 {
+		defaultName = configCreds[0].Name
 	}
-	if credentials[0].Name == "" {
-		credentials[0].Name = "default"
+	credentials := make([]Credential, 0, len(configCreds))
+	for _, cred := range configCreds {
+		credentials = append(credentials, Credential{
+			Name:           cred.Name,
+			KeyID:          cred.KeyID,
+			IssuerID:       cred.IssuerID,
+			PrivateKeyPath: cred.PrivateKeyPath,
+			IsDefault:      cred.Name == defaultName,
+		})
 	}
 	return credentials, nil
 }
 
 func getDefaultFromConfig() (*config.Config, error) {
-	cfg, err := config.Load()
-	if err != nil {
-		if err != config.ErrNotFound {
-			return nil, err
-		}
+	return getCredentialsFromConfig("")
+}
+
+// SetDefaultCredentials sets the default profile name for credential resolution.
+func SetDefaultCredentials(name string) error {
+	if strings.TrimSpace(name) == "" {
+		return fmt.Errorf("default profile name is required")
 	}
-	if !hasCompleteCredentials(cfg) {
-		if hasAnyCredentials(cfg) {
-			return nil, fmt.Errorf("incomplete credentials")
-		}
-		globalCfg, globalErr := loadGlobalConfigForCredentials()
-		if globalErr != nil {
-			if globalErr == config.ErrNotFound {
-				if err == config.ErrNotFound {
-					return nil, err
-				}
-				return nil, fmt.Errorf("incomplete credentials")
-			}
-			return nil, globalErr
-		}
-		if !hasCompleteCredentials(globalCfg) {
-			return nil, fmt.Errorf("incomplete credentials")
-		}
-		cfg = globalCfg
-	}
-	return cfg, nil
+	return saveDefaultName(name)
 }
 
 func saveDefaultName(name string) error {
@@ -651,7 +887,7 @@ func saveDefaultName(name string) error {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
-	cfg.DefaultKeyName = name
+	cfg.DefaultKeyName = strings.TrimSpace(name)
 	return config.Save(cfg)
 }
 
@@ -663,7 +899,7 @@ func defaultName() (string, error) {
 		}
 		return "", err
 	}
-	return cfg.DefaultKeyName, nil
+	return strings.TrimSpace(cfg.DefaultKeyName), nil
 }
 
 func clearDefaultNameIf(name string) error {
@@ -674,7 +910,7 @@ func clearDefaultNameIf(name string) error {
 		}
 		return err
 	}
-	if cfg.DefaultKeyName == name {
+	if strings.TrimSpace(cfg.DefaultKeyName) == strings.TrimSpace(name) {
 		cfg.DefaultKeyName = ""
 		return config.Save(cfg)
 	}
@@ -686,7 +922,28 @@ func removeFromConfig(name string) error {
 	if err != nil {
 		return err
 	}
-	if cfg.DefaultKeyName == name || name == "" {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		cfg.KeyID = ""
+		cfg.IssuerID = ""
+		cfg.PrivateKeyPath = ""
+		cfg.DefaultKeyName = ""
+		cfg.Keys = nil
+		return config.Save(cfg)
+	}
+
+	if len(cfg.Keys) > 0 {
+		filtered := cfg.Keys[:0]
+		for _, cred := range cfg.Keys {
+			if strings.TrimSpace(cred.Name) == name {
+				continue
+			}
+			filtered = append(filtered, cred)
+		}
+		cfg.Keys = filtered
+	}
+
+	if strings.TrimSpace(cfg.DefaultKeyName) == name {
 		cfg.KeyID = ""
 		cfg.IssuerID = ""
 		cfg.PrivateKeyPath = ""
