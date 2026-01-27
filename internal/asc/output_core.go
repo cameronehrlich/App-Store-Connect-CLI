@@ -105,6 +105,22 @@ func PrintMarkdown(data interface{}) error {
 		return printBetaBuildLocalizationsMarkdown(&BetaBuildLocalizationsResponse{Data: []Resource[BetaBuildLocalizationAttributes]{v.Data}})
 	case *AppInfoLocalizationsResponse:
 		return printAppInfoLocalizationsMarkdown(v)
+	case *AppScreenshotSetsResponse:
+		return printAppScreenshotSetsMarkdown(v)
+	case *AppScreenshotSetResponse:
+		return printAppScreenshotSetsMarkdown(&AppScreenshotSetsResponse{Data: []Resource[AppScreenshotSetAttributes]{v.Data}})
+	case *AppScreenshotsResponse:
+		return printAppScreenshotsMarkdown(v)
+	case *AppScreenshotResponse:
+		return printAppScreenshotsMarkdown(&AppScreenshotsResponse{Data: []Resource[AppScreenshotAttributes]{v.Data}})
+	case *AppPreviewSetsResponse:
+		return printAppPreviewSetsMarkdown(v)
+	case *AppPreviewSetResponse:
+		return printAppPreviewSetsMarkdown(&AppPreviewSetsResponse{Data: []Resource[AppPreviewSetAttributes]{v.Data}})
+	case *AppPreviewsResponse:
+		return printAppPreviewsMarkdown(v)
+	case *AppPreviewResponse:
+		return printAppPreviewsMarkdown(&AppPreviewsResponse{Data: []Resource[AppPreviewAttributes]{v.Data}})
 	case *BetaGroupsResponse:
 		return printBetaGroupsMarkdown(v)
 	case *BetaGroupResponse:
@@ -177,6 +193,16 @@ func PrintMarkdown(data interface{}) error {
 		return printBuildUploadResultMarkdown(v)
 	case *BuildExpireAllResult:
 		return printBuildExpireAllResultMarkdown(v)
+	case *AppScreenshotListResult:
+		return printAppScreenshotListResultMarkdown(v)
+	case *AppPreviewListResult:
+		return printAppPreviewListResultMarkdown(v)
+	case *AppScreenshotUploadResult:
+		return printAppScreenshotUploadResultMarkdown(v)
+	case *AppPreviewUploadResult:
+		return printAppPreviewUploadResultMarkdown(v)
+	case *AssetDeleteResult:
+		return printAssetDeleteResultMarkdown(v)
 	case *TestFlightPublishResult:
 		return printTestFlightPublishResultMarkdown(v)
 	case *AppStorePublishResult:
@@ -377,6 +403,22 @@ func PrintTable(data interface{}) error {
 		return printBetaBuildLocalizationsTable(&BetaBuildLocalizationsResponse{Data: []Resource[BetaBuildLocalizationAttributes]{v.Data}})
 	case *AppInfoLocalizationsResponse:
 		return printAppInfoLocalizationsTable(v)
+	case *AppScreenshotSetsResponse:
+		return printAppScreenshotSetsTable(v)
+	case *AppScreenshotSetResponse:
+		return printAppScreenshotSetsTable(&AppScreenshotSetsResponse{Data: []Resource[AppScreenshotSetAttributes]{v.Data}})
+	case *AppScreenshotsResponse:
+		return printAppScreenshotsTable(v)
+	case *AppScreenshotResponse:
+		return printAppScreenshotsTable(&AppScreenshotsResponse{Data: []Resource[AppScreenshotAttributes]{v.Data}})
+	case *AppPreviewSetsResponse:
+		return printAppPreviewSetsTable(v)
+	case *AppPreviewSetResponse:
+		return printAppPreviewSetsTable(&AppPreviewSetsResponse{Data: []Resource[AppPreviewSetAttributes]{v.Data}})
+	case *AppPreviewsResponse:
+		return printAppPreviewsTable(v)
+	case *AppPreviewResponse:
+		return printAppPreviewsTable(&AppPreviewsResponse{Data: []Resource[AppPreviewAttributes]{v.Data}})
 	case *BetaGroupsResponse:
 		return printBetaGroupsTable(v)
 	case *BetaGroupResponse:
@@ -449,6 +491,16 @@ func PrintTable(data interface{}) error {
 		return printBuildUploadResultTable(v)
 	case *BuildExpireAllResult:
 		return printBuildExpireAllResultTable(v)
+	case *AppScreenshotListResult:
+		return printAppScreenshotListResultTable(v)
+	case *AppPreviewListResult:
+		return printAppPreviewListResultTable(v)
+	case *AppScreenshotUploadResult:
+		return printAppScreenshotUploadResultTable(v)
+	case *AppPreviewUploadResult:
+		return printAppPreviewUploadResultTable(v)
+	case *AssetDeleteResult:
+		return printAssetDeleteResultTable(v)
 	case *TestFlightPublishResult:
 		return printTestFlightPublishResultTable(v)
 	case *AppStorePublishResult:
