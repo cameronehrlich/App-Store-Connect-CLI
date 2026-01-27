@@ -324,7 +324,7 @@ Examples:
 				return fmt.Errorf("accessibility update: %w", err)
 			}
 
-			if !hasAccessibilityDeclarationUpdates(attrs) {
+			if !asc.HasAccessibilityDeclarationUpdates(attrs) {
 				return fmt.Errorf("accessibility update: at least one update flag is required")
 			}
 
@@ -509,19 +509,6 @@ func buildAccessibilityDeclarationUpdateAttributes(values map[string]string) (as
 	attrs.SupportsVoiceover = supportsVoiceover
 
 	return attrs, nil
-}
-
-func hasAccessibilityDeclarationUpdates(attrs asc.AccessibilityDeclarationUpdateAttributes) bool {
-	return attrs.Publish != nil ||
-		attrs.SupportsAudioDescriptions != nil ||
-		attrs.SupportsCaptions != nil ||
-		attrs.SupportsDarkInterface != nil ||
-		attrs.SupportsDifferentiateWithoutColorAlone != nil ||
-		attrs.SupportsLargerText != nil ||
-		attrs.SupportsReducedMotion != nil ||
-		attrs.SupportsSufficientContrast != nil ||
-		attrs.SupportsVoiceControl != nil ||
-		attrs.SupportsVoiceover != nil
 }
 
 func normalizeAccessibilityDeviceFamily(value string) (string, error) {

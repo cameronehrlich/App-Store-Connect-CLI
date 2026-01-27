@@ -103,7 +103,7 @@ func (c *Client) UpdateAccessibilityDeclaration(ctx context.Context, declaration
 			ID:   declarationID,
 		},
 	}
-	if hasAccessibilityDeclarationUpdates(attrs) {
+	if HasAccessibilityDeclarationUpdates(attrs) {
 		payload.Data.Attributes = &attrs
 	}
 
@@ -132,7 +132,8 @@ func (c *Client) DeleteAccessibilityDeclaration(ctx context.Context, declaration
 	return err
 }
 
-func hasAccessibilityDeclarationUpdates(attrs AccessibilityDeclarationUpdateAttributes) bool {
+// HasAccessibilityDeclarationUpdates reports whether any update attributes are set.
+func HasAccessibilityDeclarationUpdates(attrs AccessibilityDeclarationUpdateAttributes) bool {
 	return attrs.Publish != nil ||
 		attrs.SupportsAudioDescriptions != nil ||
 		attrs.SupportsCaptions != nil ||
