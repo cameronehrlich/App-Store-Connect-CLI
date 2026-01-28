@@ -43,6 +43,12 @@ var (
 	strictAuth          bool
 )
 
+// CleanupTempPrivateKey removes any temporary private key created from env values.
+// Deprecated: use CleanupTempPrivateKeys to remove all tracked temp keys.
+func CleanupTempPrivateKey() {
+	CleanupTempPrivateKeys()
+}
+
 // Bold returns the string wrapped in ANSI bold codes
 func Bold(s string) string {
 	if !supportsANSI() {
