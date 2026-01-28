@@ -18,25 +18,29 @@ var (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	versionInfo := fmt.Sprintf("%s (commit: %s, date: %s)", version, commit, date)
 	root := cmd.RootCommand(versionInfo)
 	defer cmd.CleanupTempPrivateKey()
 
 	if err := root.Parse(os.Args[1:]); err != nil {
 		if err == flag.ErrHelp {
-			cmd.CleanupTempPrivateKey()
-			os.Exit(0)
+			return 0
 		}
-		cmd.CleanupTempPrivateKey()
-		log.Fatalf("error parsing flags: %v\n", err)
+		log.Printf("error parsing flags: %v", err)
+		return 1
 	}
 
 	if err := root.Run(context.Background()); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			cmd.CleanupTempPrivateKey()
-			os.Exit(1)
+			return 1
 		}
-		cmd.CleanupTempPrivateKey()
-		log.Fatalf("error executing command: %v\n", err)
+		log.Printf("error executing command: %v", err)
+		return 1
 	}
+
+	return 0
 }
