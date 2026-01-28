@@ -210,7 +210,7 @@ Examples:
 				}
 				result.VersionString = versionResp.Data.Attributes.VersionString
 				result.Platform = string(versionResp.Data.Attributes.Platform)
-				result.State = resolveAppStoreVersionState(versionResp.Data.Attributes)
+				result.State = shared.ResolveAppStoreVersionState(versionResp.Data.Attributes)
 			}
 
 			return printOutput(result, *output, *pretty)
