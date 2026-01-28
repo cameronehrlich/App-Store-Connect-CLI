@@ -1,4 +1,4 @@
-package cmd
+package shared
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
 )
 
-func upsertBetaBuildLocalization(ctx context.Context, client *asc.Client, buildID, locale, notes string) (*asc.BetaBuildLocalizationResponse, error) {
+// UpsertBetaBuildLocalization creates or updates a beta build localization.
+func UpsertBetaBuildLocalization(ctx context.Context, client *asc.Client, buildID, locale, notes string) (*asc.BetaBuildLocalizationResponse, error) {
 	localeValue := strings.TrimSpace(locale)
 	notesValue := strings.TrimSpace(notes)
 	if localeValue == "" || notesValue == "" {

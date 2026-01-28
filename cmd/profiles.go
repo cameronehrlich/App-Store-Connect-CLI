@@ -3,16 +3,15 @@ package cmd
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 )
 
 // ProfilesCommand returns the profiles command with subcommands.
@@ -340,7 +339,7 @@ Examples:
 				return fmt.Errorf("profiles download: %w", err)
 			}
 
-			if err := writeProfileFile(pathValue, decoded); err != nil {
+			if err := shared.WriteProfileFile(pathValue, decoded); err != nil {
 				return fmt.Errorf("profiles download: %w", err)
 			}
 
@@ -365,23 +364,4 @@ func decodeProfileContent(content string) ([]byte, error) {
 		return nil, err
 	}
 	return decoded, nil
-}
-
-func writeProfileFile(path string, content []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	file, err := openNewFileNoFollow(path, 0o644)
-	if err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("output file already exists: %w", err)
-		}
-		return err
-	}
-	defer file.Close()
-
-	if _, err := file.Write(content); err != nil {
-		return err
-	}
-	return file.Sync()
 }

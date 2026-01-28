@@ -1,4 +1,4 @@
-package cmd
+package signing
 
 import (
 	"context"
@@ -131,7 +131,7 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("signing fetch: decode profile: %w", err)
 			}
-			if err := writeProfileFile(profilePath, profileContent); err != nil {
+			if err := shared.WriteProfileFile(profilePath, profileContent); err != nil {
 				return fmt.Errorf("signing fetch: write profile: %w", err)
 			}
 			result.ProfileFile = profilePath

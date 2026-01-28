@@ -14,6 +14,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 )
 
 const (
@@ -598,7 +599,7 @@ func uploadScreenshotAsset(ctx context.Context, client *asc.Client, setID, fileP
 		return asc.AssetUploadResultItem{}, err
 	}
 
-	file, err := openExistingNoFollow(filePath)
+	file, err := shared.OpenExistingNoFollow(filePath)
 	if err != nil {
 		return asc.AssetUploadResultItem{}, err
 	}
@@ -653,7 +654,7 @@ func uploadPreviewAsset(ctx context.Context, client *asc.Client, setID, filePath
 		return asc.AssetUploadResultItem{}, err
 	}
 
-	file, err := openExistingNoFollow(filePath)
+	file, err := shared.OpenExistingNoFollow(filePath)
 	if err != nil {
 		return asc.AssetUploadResultItem{}, err
 	}

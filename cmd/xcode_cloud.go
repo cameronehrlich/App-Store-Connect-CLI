@@ -16,6 +16,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 )
 
 // XcodeCloudCommand returns the xcode-cloud command with subcommands.
@@ -1623,7 +1624,7 @@ func writeArtifactFile(path string, reader io.Reader, overwrite bool) (int64, er
 	}
 
 	if !overwrite {
-		file, err := openNewFileNoFollow(path, 0o600)
+		file, err := shared.OpenNewFileNoFollow(path, 0o600)
 		if err != nil {
 			if errors.Is(err, os.ErrExist) {
 				return 0, fmt.Errorf("output file already exists: %w", err)

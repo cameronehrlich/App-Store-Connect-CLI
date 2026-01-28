@@ -1,6 +1,7 @@
-package cmd
+package signing
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -10,7 +11,65 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 )
+
+func captureOutput(t *testing.T, fn func()) (string, string) {
+	t.Helper()
+
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+
+	rOut, wOut, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create stdout pipe: %v", err)
+	}
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create stderr pipe: %v", err)
+	}
+
+	os.Stdout = wOut
+	os.Stderr = wErr
+
+	outC := make(chan string)
+	errC := make(chan string)
+
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, rOut)
+		_ = rOut.Close()
+		outC <- buf.String()
+	}()
+
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, rErr)
+		_ = rErr.Close()
+		errC <- buf.String()
+	}()
+
+	defer func() {
+		os.Stdout = oldStdout
+		os.Stderr = oldStderr
+		_ = wOut.Close()
+		_ = wErr.Close()
+	}()
+
+	fn()
+
+	_ = wOut.Close()
+	_ = wErr.Close()
+
+	stdout := <-outC
+	stderr := <-errC
+
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	return stdout, stderr
+}
 
 func TestSigningFetchValidationErrors(t *testing.T) {
 	tests := []struct {
@@ -37,14 +96,18 @@ func TestSigningFetchValidationErrors(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			root := RootCommand("1.2.3")
-			root.FlagSet.SetOutput(io.Discard)
+			cmd := SigningFetchCommand()
+			cmd.FlagSet.SetOutput(io.Discard)
 
 			stdout, stderr := captureOutput(t, func() {
-				if err := root.Parse(test.args); err != nil {
+				args := test.args
+				if len(args) >= 2 && args[0] == "signing" && args[1] == "fetch" {
+					args = args[2:]
+				}
+				if err := cmd.Parse(args); err != nil {
 					t.Fatalf("parse error: %v", err)
 				}
-				err := root.Run(context.Background())
+				err := cmd.Run(context.Background())
 				if !errors.Is(err, flag.ErrHelp) {
 					t.Fatalf("expected ErrHelp, got %v", err)
 				}
@@ -72,7 +135,7 @@ func TestSigningFetchWriteFiles_NoOverwrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode profile error: %v", err)
 	}
-	if err := writeProfileFile(profilePath, profileData); err != nil {
+	if err := shared.WriteProfileFile(profilePath, profileData); err != nil {
 		t.Fatalf("writeProfileFile error: %v", err)
 	}
 	certData, err := decodeBase64Content("certificate", certContent)
@@ -95,7 +158,7 @@ func TestSigningFetchWriteFiles_NoOverwrite(t *testing.T) {
 		t.Fatalf("unexpected certificate content: %q", string(data))
 	}
 
-	if err := writeProfileFile(profilePath, profileData); err == nil {
+	if err := shared.WriteProfileFile(profilePath, profileData); err == nil {
 		t.Fatal("expected error when overwriting profile file")
 	} else if !errors.Is(err, os.ErrExist) {
 		t.Fatalf("expected ErrExist, got %v", err)

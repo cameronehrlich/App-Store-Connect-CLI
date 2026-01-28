@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/config"
 )
 
@@ -204,7 +205,7 @@ func writeStreamToFile(path string, reader io.Reader) (int64, error) {
 	}
 	// Use secure file creation to prevent symlink attacks and TOCTOU vulnerabilities
 	// O_EXCL ensures atomic creation, O_NOFOLLOW prevents symlink traversal
-	file, err := openNewFileNoFollow(path, 0o600)
+	file, err := shared.OpenNewFileNoFollow(path, 0o600)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return 0, fmt.Errorf("output file already exists: %w", err)
@@ -225,7 +226,7 @@ func writeStreamToFile(path string, reader io.Reader) (int64, error) {
 
 func decompressGzipFile(sourcePath, destPath string) (int64, error) {
 	// Open source file securely to prevent symlink attacks
-	in, err := openExistingNoFollow(sourcePath)
+	in, err := shared.OpenExistingNoFollow(sourcePath)
 	if err != nil {
 		return 0, err
 	}
@@ -243,7 +244,7 @@ func decompressGzipFile(sourcePath, destPath string) (int64, error) {
 
 	// Create destination file securely to prevent symlink attacks and TOCTOU
 	// O_EXCL ensures atomic creation, O_NOFOLLOW prevents symlink traversal
-	out, err := openNewFileNoFollow(destPath, 0o600)
+	out, err := shared.OpenNewFileNoFollow(destPath, 0o600)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return 0, fmt.Errorf("output file already exists: %w", err)

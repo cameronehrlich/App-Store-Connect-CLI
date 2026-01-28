@@ -14,6 +14,7 @@ import (
 	"unicode"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 )
 
 const (
@@ -476,7 +477,7 @@ func readStringsFile(path string) (map[string]string, error) {
 		return nil, fmt.Errorf("expected regular file: %q", path)
 	}
 
-	file, err := openExistingNoFollow(path)
+	file, err := shared.OpenExistingNoFollow(path)
 	if err != nil {
 		return nil, err
 	}
@@ -675,7 +676,7 @@ func writeStringsFile(path string, values map[string]string, order []string) err
 
 	// Create file securely to prevent symlink attacks and TOCTOU vulnerabilities
 	// O_EXCL ensures atomic creation, O_NOFOLLOW prevents symlink traversal
-	file, err := openNewFileNoFollow(path, 0o644)
+	file, err := shared.OpenNewFileNoFollow(path, 0o644)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return fmt.Errorf("output file already exists: %w", err)

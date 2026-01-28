@@ -10,6 +10,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/cli/shared"
 )
 
 // BundleIDsCommand returns the bundle IDs command with subcommands.
@@ -163,7 +164,7 @@ func BundleIDsCreateCommand() *ffcli.Command {
 
 	identifier := fs.String("identifier", "", "Bundle ID identifier (e.g., com.example.app)")
 	name := fs.String("name", "", "Bundle ID name")
-	platform := fs.String("platform", "IOS", "Platform: "+strings.Join(signingPlatformList(), ", "))
+	platform := fs.String("platform", "IOS", "Platform: "+strings.Join(shared.PlatformList(), ", "))
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
 
@@ -188,7 +189,7 @@ Examples:
 				fmt.Fprintln(os.Stderr, "Error: --name is required")
 				return flag.ErrHelp
 			}
-			platformValue, err := normalizePlatform(*platform)
+			platformValue, err := shared.NormalizePlatform(*platform)
 			if err != nil {
 				return fmt.Errorf("bundle-ids create: %w", err)
 			}
