@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -428,7 +431,6 @@ Examples:
 			switch {
 			case trimmedDiagnosticID != "":
 				defaultOutput := fmt.Sprintf("diagnostic_logs_%s.json", trimmedDiagnosticID)
-				compressedPath, decompressedPath := resolveReportOutputPaths(*output, defaultOutput, ".json", *decompress)
 
 				download, err := client.DownloadDiagnosticSignatureLogs(requestCtx, trimmedDiagnosticID, asc.WithDiagnosticLogsLimit(*limit))
 				if err != nil {
@@ -436,13 +438,20 @@ Examples:
 				}
 				defer download.Body.Close()
 
-				compressedSize, err := writeStreamToFile(compressedPath, download.Body)
+				reader, isGzip, err := preparePerformanceDownloadReader(download.Body, *decompress)
+				if err != nil {
+					return fmt.Errorf("performance download: %w", err)
+				}
+				shouldDecompress := *decompress && isGzip
+				compressedPath, decompressedPath := resolveReportOutputPaths(*output, defaultOutput, ".json", shouldDecompress)
+
+				compressedSize, err := writeStreamToFile(compressedPath, reader)
 				if err != nil {
 					return fmt.Errorf("performance download: %w", err)
 				}
 
 				var decompressedSize int64
-				if *decompress {
+				if shouldDecompress {
 					decompressedSize, err = decompressGzipFile(compressedPath, decompressedPath)
 					if err != nil {
 						return fmt.Errorf("performance download: %w", err)
@@ -454,7 +463,7 @@ Examples:
 					DiagnosticSignatureID: trimmedDiagnosticID,
 					FilePath:              compressedPath,
 					FileSize:              compressedSize,
-					Decompressed:          *decompress,
+					Decompressed:          shouldDecompress,
 					DecompressedPath:      decompressedPath,
 					DecompressedSize:      decompressedSize,
 				}
@@ -462,7 +471,6 @@ Examples:
 				return printOutput(result, *outputFormat, *pretty)
 			case trimmedBuildID != "":
 				defaultOutput := fmt.Sprintf("perf_power_metrics_%s.json", trimmedBuildID)
-				compressedPath, decompressedPath := resolveReportOutputPaths(*output, defaultOutput, ".json", *decompress)
 
 				download, err := client.DownloadPerfPowerMetricsForBuild(requestCtx, trimmedBuildID,
 					asc.WithPerfPowerMetricsPlatforms(platforms),
@@ -474,13 +482,20 @@ Examples:
 				}
 				defer download.Body.Close()
 
-				compressedSize, err := writeStreamToFile(compressedPath, download.Body)
+				reader, isGzip, err := preparePerformanceDownloadReader(download.Body, *decompress)
+				if err != nil {
+					return fmt.Errorf("performance download: %w", err)
+				}
+				shouldDecompress := *decompress && isGzip
+				compressedPath, decompressedPath := resolveReportOutputPaths(*output, defaultOutput, ".json", shouldDecompress)
+
+				compressedSize, err := writeStreamToFile(compressedPath, reader)
 				if err != nil {
 					return fmt.Errorf("performance download: %w", err)
 				}
 
 				var decompressedSize int64
-				if *decompress {
+				if shouldDecompress {
 					decompressedSize, err = decompressGzipFile(compressedPath, decompressedPath)
 					if err != nil {
 						return fmt.Errorf("performance download: %w", err)
@@ -492,7 +507,7 @@ Examples:
 					BuildID:          trimmedBuildID,
 					FilePath:         compressedPath,
 					FileSize:         compressedSize,
-					Decompressed:     *decompress,
+					Decompressed:     shouldDecompress,
 					DecompressedPath: decompressedPath,
 					DecompressedSize: decompressedSize,
 				}
@@ -500,7 +515,6 @@ Examples:
 				return printOutput(result, *outputFormat, *pretty)
 			default:
 				defaultOutput := fmt.Sprintf("perf_power_metrics_%s.json", appFlag)
-				compressedPath, decompressedPath := resolveReportOutputPaths(*output, defaultOutput, ".json", *decompress)
 
 				download, err := client.DownloadPerfPowerMetricsForApp(requestCtx, appFlag,
 					asc.WithPerfPowerMetricsPlatforms(platforms),
@@ -512,13 +526,20 @@ Examples:
 				}
 				defer download.Body.Close()
 
-				compressedSize, err := writeStreamToFile(compressedPath, download.Body)
+				reader, isGzip, err := preparePerformanceDownloadReader(download.Body, *decompress)
+				if err != nil {
+					return fmt.Errorf("performance download: %w", err)
+				}
+				shouldDecompress := *decompress && isGzip
+				compressedPath, decompressedPath := resolveReportOutputPaths(*output, defaultOutput, ".json", shouldDecompress)
+
+				compressedSize, err := writeStreamToFile(compressedPath, reader)
 				if err != nil {
 					return fmt.Errorf("performance download: %w", err)
 				}
 
 				var decompressedSize int64
-				if *decompress {
+				if shouldDecompress {
 					decompressedSize, err = decompressGzipFile(compressedPath, decompressedPath)
 					if err != nil {
 						return fmt.Errorf("performance download: %w", err)
@@ -530,7 +551,7 @@ Examples:
 					AppID:            appFlag,
 					FilePath:         compressedPath,
 					FileSize:         compressedSize,
-					Decompressed:     *decompress,
+					Decompressed:     shouldDecompress,
 					DecompressedPath: decompressedPath,
 					DecompressedSize: decompressedSize,
 				}
@@ -621,6 +642,20 @@ func normalizeDiagnosticSignatureTypes(values []string) ([]string, error) {
 		}
 	}
 	return values, nil
+}
+
+func preparePerformanceDownloadReader(reader io.Reader, decompress bool) (io.Reader, bool, error) {
+	if !decompress {
+		return reader, false, nil
+	}
+
+	buffered := bufio.NewReader(reader)
+	header, err := buffered.Peek(2)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, false, err
+	}
+	isGzip := len(header) >= 2 && header[0] == 0x1f && header[1] == 0x8b
+	return buffered, isGzip, nil
 }
 
 func diagnosticSignatureFieldList() []string {
