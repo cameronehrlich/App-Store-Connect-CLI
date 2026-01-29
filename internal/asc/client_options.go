@@ -35,6 +35,12 @@ type BetaAppClipInvocationsOption func(*betaAppClipInvocationsQuery)
 // SubscriptionOfferCodeOneTimeUseCodesOption is a functional option for GetSubscriptionOfferCodeOneTimeUseCodes.
 type SubscriptionOfferCodeOneTimeUseCodesOption func(*subscriptionOfferCodeOneTimeUseCodesQuery)
 
+// WinBackOffersOption is a functional option for win-back offer list endpoints.
+type WinBackOffersOption func(*winBackOffersQuery)
+
+// WinBackOfferPricesOption is a functional option for win-back offer prices list endpoints.
+type WinBackOfferPricesOption func(*winBackOfferPricesQuery)
+
 // AppStoreVersionsOption is a functional option for GetAppStoreVersions.
 type AppStoreVersionsOption func(*appStoreVersionsQuery)
 
@@ -106,6 +112,9 @@ type AppInfoLocalizationsOption func(*appInfoLocalizationsQuery)
 
 // TerritoriesOption is a functional option for GetTerritories.
 type TerritoriesOption func(*territoriesQuery)
+
+// AndroidToIosAppMappingDetailsOption is a functional option for Android-to-iOS mappings.
+type AndroidToIosAppMappingDetailsOption func(*androidToIosAppMappingDetailsQuery)
 
 // PerfPowerMetricsOption is a functional option for performance/power metrics.
 type PerfPowerMetricsOption func(*perfPowerMetricsQuery)
@@ -305,6 +314,106 @@ func WithMarketplaceWebhooksFields(fields []string) MarketplaceWebhooksOption {
 	}
 }
 
+// WithWinBackOffersLimit sets the max number of win-back offers to return.
+func WithWinBackOffersLimit(limit int) WinBackOffersOption {
+	return func(q *winBackOffersQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithWinBackOffersNextURL uses a next page URL directly.
+func WithWinBackOffersNextURL(next string) WinBackOffersOption {
+	return func(q *winBackOffersQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithWinBackOffersFields sets fields[winBackOffers] for win-back offer responses.
+func WithWinBackOffersFields(fields []string) WinBackOffersOption {
+	return func(q *winBackOffersQuery) {
+		q.fields = normalizeList(fields)
+	}
+}
+
+// WithWinBackOffersPriceFields sets fields[winBackOfferPrices] for included prices.
+func WithWinBackOffersPriceFields(fields []string) WinBackOffersOption {
+	return func(q *winBackOffersQuery) {
+		q.priceFields = normalizeList(fields)
+	}
+}
+
+// WithWinBackOffersInclude sets include for win-back offer responses.
+func WithWinBackOffersInclude(include []string) WinBackOffersOption {
+	return func(q *winBackOffersQuery) {
+		q.include = normalizeList(include)
+	}
+}
+
+// WithWinBackOffersPricesLimit sets limit[prices] for included prices.
+func WithWinBackOffersPricesLimit(limit int) WinBackOffersOption {
+	return func(q *winBackOffersQuery) {
+		if limit > 0 {
+			q.pricesLimit = limit
+		}
+	}
+}
+
+// WithWinBackOfferPricesLimit sets the max number of win-back offer prices to return.
+func WithWinBackOfferPricesLimit(limit int) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithWinBackOfferPricesNextURL uses a next page URL directly.
+func WithWinBackOfferPricesNextURL(next string) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithWinBackOfferPricesTerritoryFilter filters win-back offer prices by territory ID(s).
+func WithWinBackOfferPricesTerritoryFilter(ids []string) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		q.territoryIDs = normalizeList(ids)
+	}
+}
+
+// WithWinBackOfferPricesFields sets fields[winBackOfferPrices] for price responses.
+func WithWinBackOfferPricesFields(fields []string) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		q.fields = normalizeList(fields)
+	}
+}
+
+// WithWinBackOfferPricesTerritoryFields sets fields[territories] for included territories.
+func WithWinBackOfferPricesTerritoryFields(fields []string) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		q.territoryFields = normalizeList(fields)
+	}
+}
+
+// WithWinBackOfferPricesSubscriptionPricePointFields sets fields[subscriptionPricePoints] for included price points.
+func WithWinBackOfferPricesSubscriptionPricePointFields(fields []string) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		q.subscriptionPricePointFields = normalizeList(fields)
+	}
+}
+
+// WithWinBackOfferPricesInclude sets include for win-back offer price responses.
+func WithWinBackOfferPricesInclude(include []string) WinBackOfferPricesOption {
+	return func(q *winBackOfferPricesQuery) {
+		q.include = normalizeList(include)
+	}
+}
 // WithCrashTesterIDs filters crashes by tester ID(s).
 func WithCrashTesterIDs(ids []string) CrashOption {
 	return func(q *crashQuery) {
@@ -1517,6 +1626,31 @@ func WithTerritoriesNextURL(next string) TerritoriesOption {
 // WithTerritoriesFields sets fields[territories] for territory responses.
 func WithTerritoriesFields(fields []string) TerritoriesOption {
 	return func(q *territoriesQuery) {
+		q.fields = normalizeList(fields)
+	}
+}
+
+// WithAndroidToIosAppMappingDetailsLimit sets the max number of mappings to return.
+func WithAndroidToIosAppMappingDetailsLimit(limit int) AndroidToIosAppMappingDetailsOption {
+	return func(q *androidToIosAppMappingDetailsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithAndroidToIosAppMappingDetailsNextURL uses a next page URL directly.
+func WithAndroidToIosAppMappingDetailsNextURL(next string) AndroidToIosAppMappingDetailsOption {
+	return func(q *androidToIosAppMappingDetailsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithAndroidToIosAppMappingDetailsFields sets fields[androidToIosAppMappingDetails].
+func WithAndroidToIosAppMappingDetailsFields(fields []string) AndroidToIosAppMappingDetailsOption {
+	return func(q *androidToIosAppMappingDetailsQuery) {
 		q.fields = normalizeList(fields)
 	}
 }

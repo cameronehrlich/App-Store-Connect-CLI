@@ -955,6 +955,86 @@ func TestBuildSubscriptionOfferCodeOneTimeUseCodesQuery(t *testing.T) {
 	}
 }
 
+func TestBuildWinBackOffersQuery(t *testing.T) {
+	query := &winBackOffersQuery{}
+	opts := []WinBackOffersOption{
+		WithWinBackOffersLimit(25),
+		WithWinBackOffersFields([]string{"referenceName", "offerMode"}),
+		WithWinBackOffersPriceFields([]string{"territory"}),
+		WithWinBackOffersInclude([]string{"prices"}),
+		WithWinBackOffersPricesLimit(10),
+	}
+	for _, opt := range opts {
+		opt(query)
+	}
+
+	if query.limit != 25 {
+		t.Fatalf("expected limit=25, got %d", query.limit)
+	}
+
+	values, err := url.ParseQuery(buildWinBackOffersQuery(query))
+	if err != nil {
+		t.Fatalf("failed to parse query: %v", err)
+	}
+	if got := values.Get("limit"); got != "25" {
+		t.Fatalf("expected limit=25, got %q", got)
+	}
+	if got := values.Get("fields[winBackOffers]"); got != "referenceName,offerMode" {
+		t.Fatalf("expected winBackOffers fields, got %q", got)
+	}
+	if got := values.Get("fields[winBackOfferPrices]"); got != "territory" {
+		t.Fatalf("expected winBackOfferPrices fields, got %q", got)
+	}
+	if got := values.Get("include"); got != "prices" {
+		t.Fatalf("expected include=prices, got %q", got)
+	}
+	if got := values.Get("limit[prices]"); got != "10" {
+		t.Fatalf("expected limit[prices]=10, got %q", got)
+	}
+}
+
+func TestBuildWinBackOfferPricesQuery(t *testing.T) {
+	query := &winBackOfferPricesQuery{}
+	opts := []WinBackOfferPricesOption{
+		WithWinBackOfferPricesLimit(15),
+		WithWinBackOfferPricesTerritoryFilter([]string{"USA", "CAN"}),
+		WithWinBackOfferPricesFields([]string{"territory"}),
+		WithWinBackOfferPricesTerritoryFields([]string{"currency"}),
+		WithWinBackOfferPricesSubscriptionPricePointFields([]string{"customerPrice", "proceeds"}),
+		WithWinBackOfferPricesInclude([]string{"territory", "subscriptionPricePoint"}),
+	}
+	for _, opt := range opts {
+		opt(query)
+	}
+
+	if query.limit != 15 {
+		t.Fatalf("expected limit=15, got %d", query.limit)
+	}
+
+	values, err := url.ParseQuery(buildWinBackOfferPricesQuery(query))
+	if err != nil {
+		t.Fatalf("failed to parse query: %v", err)
+	}
+	if got := values.Get("limit"); got != "15" {
+		t.Fatalf("expected limit=15, got %q", got)
+	}
+	if got := values.Get("filter[territory]"); got != "USA,CAN" {
+		t.Fatalf("expected territory filter, got %q", got)
+	}
+	if got := values.Get("fields[winBackOfferPrices]"); got != "territory" {
+		t.Fatalf("expected winBackOfferPrices fields, got %q", got)
+	}
+	if got := values.Get("fields[territories]"); got != "currency" {
+		t.Fatalf("expected territories fields, got %q", got)
+	}
+	if got := values.Get("fields[subscriptionPricePoints]"); got != "customerPrice,proceeds" {
+		t.Fatalf("expected subscriptionPricePoints fields, got %q", got)
+	}
+	if got := values.Get("include"); got != "territory,subscriptionPricePoint" {
+		t.Fatalf("expected include list, got %q", got)
+	}
+}
+
 func TestBuildPerfPowerMetricsQuery(t *testing.T) {
 	query := &perfPowerMetricsQuery{
 		platforms:   []string{"IOS"},
@@ -1005,6 +1085,23 @@ func TestBuildDiagnosticLogsQuery(t *testing.T) {
 	}
 	if values.Get("limit") != "50" {
 		t.Fatalf("expected limit=50, got %q", values.Get("limit"))
+	}
+}
+
+func TestBuildAndroidToIosAppMappingDetailsQuery(t *testing.T) {
+	query := &androidToIosAppMappingDetailsQuery{
+		listQuery: listQuery{limit: 10},
+		fields:    []string{"packageName", "appSigningKeyPublicCertificateSha256Fingerprints"},
+	}
+	values, err := url.ParseQuery(buildAndroidToIosAppMappingDetailsQuery(query))
+	if err != nil {
+		t.Fatalf("ParseQuery() error: %v", err)
+	}
+	if values.Get("limit") != "10" {
+		t.Fatalf("expected limit=10, got %q", values.Get("limit"))
+	}
+	if values.Get("fields[androidToIosAppMappingDetails]") != "packageName,appSigningKeyPublicCertificateSha256Fingerprints" {
+		t.Fatalf("unexpected fields, got %q", values.Get("fields[androidToIosAppMappingDetails]"))
 	}
 }
 
