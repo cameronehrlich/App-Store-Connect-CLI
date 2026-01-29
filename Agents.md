@@ -65,7 +65,6 @@ Detailed guidance on specific topics (only read when needed):
 
 - **Go coding standards**: `docs/GO_STANDARDS.md`
 - **Testing patterns**: `docs/TESTING.md`
-- **Git workflow, adding features**: `docs/CONTRIBUTING.md`
+- **Git workflow, CLI structure, adding features**: `docs/CONTRIBUTING.md`
 - **API quirks (analytics, finance, sandbox)**: `docs/API_NOTES.md`
-- **CLI command patterns**: `docs/CLI_COMMAND_PATTERNS.md`
 - **Development setup, PRs**: `CONTRIBUTING.md` (root)
