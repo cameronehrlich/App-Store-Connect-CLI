@@ -195,30 +195,32 @@ func formatAlternativeDistributionChecksum(label string, checksum *Checksum) str
 	return fmt.Sprintf("%s:%s", label, checksum.Hash)
 }
 
-func printAlternativeDistributionDomainDeleteResultTable(result *AlternativeDistributionDomainDeleteResult) error {
+func printAlternativeDistributionDeleteResultTable(id string, deleted bool) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tDeleted")
-	fmt.Fprintf(w, "%s\t%t\n", result.ID, result.Deleted)
+	fmt.Fprintf(w, "%s\t%t\n", id, deleted)
 	return w.Flush()
+}
+
+func printAlternativeDistributionDeleteResultMarkdown(id string, deleted bool) error {
+	fmt.Fprintln(os.Stdout, "| ID | Deleted |")
+	fmt.Fprintln(os.Stdout, "| --- | --- |")
+	fmt.Fprintf(os.Stdout, "| %s | %t |\n", escapeMarkdown(id), deleted)
+	return nil
+}
+
+func printAlternativeDistributionDomainDeleteResultTable(result *AlternativeDistributionDomainDeleteResult) error {
+	return printAlternativeDistributionDeleteResultTable(result.ID, result.Deleted)
 }
 
 func printAlternativeDistributionDomainDeleteResultMarkdown(result *AlternativeDistributionDomainDeleteResult) error {
-	fmt.Fprintln(os.Stdout, "| ID | Deleted |")
-	fmt.Fprintln(os.Stdout, "| --- | --- |")
-	fmt.Fprintf(os.Stdout, "| %s | %t |\n", escapeMarkdown(result.ID), result.Deleted)
-	return nil
+	return printAlternativeDistributionDeleteResultMarkdown(result.ID, result.Deleted)
 }
 
 func printAlternativeDistributionKeyDeleteResultTable(result *AlternativeDistributionKeyDeleteResult) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tDeleted")
-	fmt.Fprintf(w, "%s\t%t\n", result.ID, result.Deleted)
-	return w.Flush()
+	return printAlternativeDistributionDeleteResultTable(result.ID, result.Deleted)
 }
 
 func printAlternativeDistributionKeyDeleteResultMarkdown(result *AlternativeDistributionKeyDeleteResult) error {
-	fmt.Fprintln(os.Stdout, "| ID | Deleted |")
-	fmt.Fprintln(os.Stdout, "| --- | --- |")
-	fmt.Fprintf(os.Stdout, "| %s | %t |\n", escapeMarkdown(result.ID), result.Deleted)
-	return nil
+	return printAlternativeDistributionDeleteResultMarkdown(result.ID, result.Deleted)
 }

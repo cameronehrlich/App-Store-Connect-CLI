@@ -374,13 +374,6 @@ func WithAlternativeDistributionDomainsNextURL(next string) AlternativeDistribut
 	}
 }
 
-// WithAlternativeDistributionDomainsFields sets fields[alternativeDistributionDomains] values.
-func WithAlternativeDistributionDomainsFields(fields []string) AlternativeDistributionDomainsOption {
-	return func(q *alternativeDistributionDomainsQuery) {
-		q.fields = normalizeList(fields)
-	}
-}
-
 // WithAlternativeDistributionKeysLimit sets the max number of keys to return.
 func WithAlternativeDistributionKeysLimit(limit int) AlternativeDistributionKeysOption {
 	return func(q *alternativeDistributionKeysQuery) {
@@ -396,20 +389,6 @@ func WithAlternativeDistributionKeysNextURL(next string) AlternativeDistribution
 		if strings.TrimSpace(next) != "" {
 			q.nextURL = strings.TrimSpace(next)
 		}
-	}
-}
-
-// WithAlternativeDistributionKeysFields sets fields[alternativeDistributionKeys] values.
-func WithAlternativeDistributionKeysFields(fields []string) AlternativeDistributionKeysOption {
-	return func(q *alternativeDistributionKeysQuery) {
-		q.fields = normalizeList(fields)
-	}
-}
-
-// WithAlternativeDistributionKeysExistsApp filters keys by app existence.
-func WithAlternativeDistributionKeysExistsApp(value bool) AlternativeDistributionKeysOption {
-	return func(q *alternativeDistributionKeysQuery) {
-		q.existsApp = &value
 	}
 }
 
@@ -449,13 +428,6 @@ func WithAlternativeDistributionPackageVariantsNextURL(next string) AlternativeD
 	}
 }
 
-// WithAlternativeDistributionPackageVariantsFields sets fields[alternativeDistributionPackageVariants].
-func WithAlternativeDistributionPackageVariantsFields(fields []string) AlternativeDistributionPackageVariantsOption {
-	return func(q *alternativeDistributionPackageVariantsQuery) {
-		q.fields = normalizeList(fields)
-	}
-}
-
 // WithAlternativeDistributionPackageDeltasLimit sets the max number of package deltas to return.
 func WithAlternativeDistributionPackageDeltasLimit(limit int) AlternativeDistributionPackageDeltasOption {
 	return func(q *alternativeDistributionPackageDeltasQuery) {
@@ -471,13 +443,6 @@ func WithAlternativeDistributionPackageDeltasNextURL(next string) AlternativeDis
 		if strings.TrimSpace(next) != "" {
 			q.nextURL = strings.TrimSpace(next)
 		}
-	}
-}
-
-// WithAlternativeDistributionPackageDeltasFields sets fields[alternativeDistributionPackageDeltas].
-func WithAlternativeDistributionPackageDeltasFields(fields []string) AlternativeDistributionPackageDeltasOption {
-	return func(q *alternativeDistributionPackageDeltasQuery) {
-		q.fields = normalizeList(fields)
 	}
 }
 
