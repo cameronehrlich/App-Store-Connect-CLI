@@ -81,6 +81,14 @@ func PrintMarkdown(data interface{}) error {
 		return printBundleIDsMarkdown(v)
 	case *BundleIDResponse:
 		return printBundleIDsMarkdown(&BundleIDsResponse{Data: []Resource[BundleIDAttributes]{v.Data}})
+	case *MerchantIDsResponse:
+		return printMerchantIDsMarkdown(v)
+	case *MerchantIDResponse:
+		return printMerchantIDsMarkdown(&MerchantIDsResponse{Data: []Resource[MerchantIDAttributes]{v.Data}})
+	case *PassTypeIDsResponse:
+		return printPassTypeIDsMarkdown(v)
+	case *PassTypeIDResponse:
+		return printPassTypeIDsMarkdown(&PassTypeIDsResponse{Data: []Resource[PassTypeIDAttributes]{v.Data}})
 	case *CertificatesResponse:
 		return printCertificatesMarkdown(v)
 	case *CertificateResponse:
@@ -421,6 +429,10 @@ func PrintMarkdown(data interface{}) error {
 		return printMarketplaceSearchDetailDeleteResultMarkdown(v)
 	case *MarketplaceWebhookDeleteResult:
 		return printMarketplaceWebhookDeleteResultMarkdown(v)
+	case *MerchantIDDeleteResult:
+		return printMerchantIDDeleteResultMarkdown(v)
+	case *PassTypeIDDeleteResult:
+		return printPassTypeIDDeleteResultMarkdown(v)
 	case *BundleIDCapabilityDeleteResult:
 		return printBundleIDCapabilityDeleteResultMarkdown(v)
 	case *CertificateRevokeResult:
@@ -555,6 +567,14 @@ func PrintTable(data interface{}) error {
 		return printBundleIDsTable(v)
 	case *BundleIDResponse:
 		return printBundleIDsTable(&BundleIDsResponse{Data: []Resource[BundleIDAttributes]{v.Data}})
+	case *MerchantIDsResponse:
+		return printMerchantIDsTable(v)
+	case *MerchantIDResponse:
+		return printMerchantIDsTable(&MerchantIDsResponse{Data: []Resource[MerchantIDAttributes]{v.Data}})
+	case *PassTypeIDsResponse:
+		return printPassTypeIDsTable(v)
+	case *PassTypeIDResponse:
+		return printPassTypeIDsTable(&PassTypeIDsResponse{Data: []Resource[PassTypeIDAttributes]{v.Data}})
 	case *CertificatesResponse:
 		return printCertificatesTable(v)
 	case *CertificateResponse:
@@ -895,6 +915,10 @@ func PrintTable(data interface{}) error {
 		return printMarketplaceSearchDetailDeleteResultTable(v)
 	case *MarketplaceWebhookDeleteResult:
 		return printMarketplaceWebhookDeleteResultTable(v)
+	case *MerchantIDDeleteResult:
+		return printMerchantIDDeleteResultTable(v)
+	case *PassTypeIDDeleteResult:
+		return printPassTypeIDDeleteResultTable(v)
 	case *BundleIDCapabilityDeleteResult:
 		return printBundleIDCapabilityDeleteResultTable(v)
 	case *CertificateRevokeResult:
