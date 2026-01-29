@@ -48,8 +48,6 @@ func PassTypeIDCertificatesListCommand() *ffcli.Command {
 	ids := fs.String("id", "", "Filter by certificate ID(s), comma-separated")
 	sort := fs.String("sort", "", "Sort by: "+strings.Join(passTypeIDCertificatesSortList(), ", "))
 	fields := fs.String("fields", "", "Fields to include: "+strings.Join(certificateFieldsList(), ", "))
-	passTypeIDFields := fs.String("pass-type-id-fields", "", "Pass type ID fields to include: "+strings.Join(passTypeIDFieldsList(), ", "))
-	include := fs.String("include", "", "Include relationships: "+strings.Join(passTypeIDCertificatesIncludeList(), ", "))
 	limit := fs.Int("limit", 0, "Maximum results per page (1-200)")
 	next := fs.String("next", "", "Fetch next page using a links.next URL")
 	paginate := fs.Bool("paginate", false, "Automatically fetch all pages (aggregate results)")
@@ -87,14 +85,6 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("pass-type-ids certificates list: %w", err)
 			}
-			passTypeIDFieldsValue, err := normalizePassTypeIDFields(*passTypeIDFields, "--pass-type-id-fields")
-			if err != nil {
-				return fmt.Errorf("pass-type-ids certificates list: %w", err)
-			}
-			includeValue, err := normalizePassTypeIDCertificatesInclude(*include)
-			if err != nil {
-				return fmt.Errorf("pass-type-ids certificates list: %w", err)
-			}
 
 			client, err := getASCClient()
 			if err != nil {
@@ -129,12 +119,6 @@ Examples:
 			}
 			if len(fieldsValue) > 0 {
 				opts = append(opts, asc.WithPassTypeIDCertificatesFields(fieldsValue))
-			}
-			if len(passTypeIDFieldsValue) > 0 {
-				opts = append(opts, asc.WithPassTypeIDCertificatesPassTypeIDFields(passTypeIDFieldsValue))
-			}
-			if len(includeValue) > 0 {
-				opts = append(opts, asc.WithPassTypeIDCertificatesInclude(includeValue))
 			}
 
 			if *paginate {

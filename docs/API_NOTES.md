@@ -59,3 +59,8 @@ Finance reports use Apple fiscal months (`YYYY-MM`), not calendar months.
 - Registration requires a UDID (iOS) or Hardware UUID (macOS).
 - Device management UI lives in the Apple Developer portal, not App Store Connect.
 - Device reset is limited to once per membership year; disabling does not free slots.
+
+## Pass Type IDs
+
+- Live API rejects `include=passTypeId` and `fields[passTypeIds]` on `/v1/passTypeIds/{id}/certificates` despite the OpenAPI spec allowing them.
+- The CLI does not expose those parameters for `pass-type-ids certificates list` to avoid API errors.
