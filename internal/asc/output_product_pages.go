@@ -6,13 +6,6 @@ import (
 	"text/tabwriter"
 )
 
-func formatOptionalInt(value *int) string {
-	if value == nil {
-		return ""
-	}
-	return fmt.Sprintf("%d", *value)
-}
-
 func printAppCustomProductPagesTable(resp *AppCustomProductPagesResponse) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tName\tVisible\tURL")
