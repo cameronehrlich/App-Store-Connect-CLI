@@ -200,10 +200,14 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 		result = &CiProductsResponse{Links: Links{}}
 	case *CiWorkflowsResponse:
 		result = &CiWorkflowsResponse{Links: Links{}}
+	case *ScmProvidersResponse:
+		result = &ScmProvidersResponse{Links: Links{}}
 	case *ScmGitReferencesResponse:
 		result = &ScmGitReferencesResponse{Links: Links{}}
 	case *ScmRepositoriesResponse:
 		result = &ScmRepositoriesResponse{Links: Links{}}
+	case *ScmPullRequestsResponse:
+		result = &ScmPullRequestsResponse{Links: Links{}}
 	case *CiBuildRunsResponse:
 		result = &CiBuildRunsResponse{Links: Links{}}
 	case *CiBuildActionsResponse:
@@ -444,10 +448,14 @@ func typeOf(p PaginatedResponse) string {
 		return "CiProductsResponse"
 	case *CiWorkflowsResponse:
 		return "CiWorkflowsResponse"
+	case *ScmProvidersResponse:
+		return "ScmProvidersResponse"
 	case *ScmGitReferencesResponse:
 		return "ScmGitReferencesResponse"
 	case *ScmRepositoriesResponse:
 		return "ScmRepositoriesResponse"
+	case *ScmPullRequestsResponse:
+		return "ScmPullRequestsResponse"
 	case *CiBuildRunsResponse:
 		return "CiBuildRunsResponse"
 	case *CiBuildActionsResponse:

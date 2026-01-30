@@ -4,6 +4,7 @@ package asc
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"os"
 	"sort"
@@ -62,6 +63,119 @@ func TestIntegrationEndpoints(t *testing.T) {
 		}
 		assertASCLink(t, localizations.Links.Self)
 		assertASCLink(t, localizations.Links.Next)
+	})
+
+	t.Run("xcode_cloud_scm", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		providers, err := client.GetScmProviders(ctx, WithScmProvidersLimit(1))
+		if err != nil {
+			if errors.Is(err, ErrForbidden) || errors.Is(err, ErrNotFound) {
+				t.Skipf("scm providers unavailable: %v", err)
+			}
+			t.Fatalf("failed to fetch scm providers: %v", err)
+		}
+		if providers == nil || len(providers.Data) == 0 {
+			t.Skip("no scm providers available")
+		}
+
+		providerID := strings.TrimSpace(providers.Data[0].ID)
+		if providerID == "" {
+			t.Skip("no scm provider id available")
+		}
+
+		provider, err := client.GetScmProvider(ctx, providerID)
+		if err != nil {
+			t.Fatalf("failed to fetch scm provider: %v", err)
+		}
+		if provider == nil || provider.Data.ID == "" {
+			t.Fatal("expected scm provider data")
+		}
+		assertASCLink(t, provider.Links.Self)
+
+		repos, err := client.GetScmProviderRepositories(ctx, providerID, WithScmRepositoriesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch scm provider repositories: %v", err)
+		}
+		if repos == nil || len(repos.Data) == 0 {
+			t.Skip("no scm repositories available")
+		}
+
+		repoID := strings.TrimSpace(repos.Data[0].ID)
+		if repoID == "" {
+			t.Skip("no scm repository id available")
+		}
+
+		repo, err := client.GetScmRepository(ctx, repoID)
+		if err != nil {
+			t.Fatalf("failed to fetch scm repository: %v", err)
+		}
+		if repo == nil || repo.ID == "" {
+			t.Fatal("expected scm repository data")
+		}
+
+		gitReferences, err := client.GetScmGitReferences(ctx, repoID, WithScmGitReferencesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch scm git references: %v", err)
+		}
+		if gitReferences == nil || len(gitReferences.Data) == 0 {
+			t.Skip("no scm git references available")
+		}
+
+		gitRefID := strings.TrimSpace(gitReferences.Data[0].ID)
+		if gitRefID == "" {
+			t.Skip("no scm git reference id available")
+		}
+
+		gitRef, err := client.GetScmGitReference(ctx, gitRefID)
+		if err != nil {
+			t.Fatalf("failed to fetch scm git reference: %v", err)
+		}
+		if gitRef == nil || gitRef.Data.ID == "" {
+			t.Fatal("expected scm git reference data")
+		}
+		assertASCLink(t, gitRef.Links.Self)
+
+		gitRefRel, err := client.GetScmRepositoryGitReferencesRelationships(ctx, repoID, WithLinkagesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch scm git reference relationships: %v", err)
+		}
+		if gitRefRel != nil {
+			assertASCLink(t, gitRefRel.Links.Self)
+			assertASCLink(t, gitRefRel.Links.Next)
+		}
+
+		pullRequests, err := client.GetScmRepositoryPullRequests(ctx, repoID, WithScmPullRequestsLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch scm pull requests: %v", err)
+		}
+		if pullRequests == nil || len(pullRequests.Data) == 0 {
+			t.Skip("no scm pull requests available")
+		}
+
+		pullRequestID := strings.TrimSpace(pullRequests.Data[0].ID)
+		if pullRequestID == "" {
+			t.Skip("no scm pull request id available")
+		}
+
+		pullRequest, err := client.GetScmPullRequest(ctx, pullRequestID)
+		if err != nil {
+			t.Fatalf("failed to fetch scm pull request: %v", err)
+		}
+		if pullRequest == nil || pullRequest.Data.ID == "" {
+			t.Fatal("expected scm pull request data")
+		}
+		assertASCLink(t, pullRequest.Links.Self)
+
+		pullRequestRel, err := client.GetScmRepositoryPullRequestsRelationships(ctx, repoID, WithLinkagesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch scm pull request relationships: %v", err)
+		}
+		if pullRequestRel != nil {
+			assertASCLink(t, pullRequestRel.Links.Self)
+			assertASCLink(t, pullRequestRel.Links.Next)
+		}
 	})
 
 	t.Run("feedback", func(t *testing.T) {

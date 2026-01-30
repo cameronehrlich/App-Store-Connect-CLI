@@ -594,6 +594,173 @@ func TestPrintMarkdown_ScmRepositories(t *testing.T) {
 	}
 }
 
+func TestPrintTable_ScmProviders(t *testing.T) {
+	resp := &ScmProvidersResponse{
+		Data: []ScmProviderResource{
+			{
+				ID: "provider-1",
+				Attributes: ScmProviderAttributes{
+					ScmProviderType: "GITHUB",
+					URL:             "https://github.com",
+				},
+			},
+		},
+	}
+
+	output := captureXcodeCloudStdout(t, func() error {
+		return PrintTable(resp)
+	})
+
+	if !strings.Contains(output, "Provider Type") {
+		t.Fatalf("expected header in output, got: %s", output)
+	}
+	if !strings.Contains(output, "GITHUB") {
+		t.Fatalf("expected provider type in output, got: %s", output)
+	}
+}
+
+func TestPrintMarkdown_ScmProviders(t *testing.T) {
+	resp := &ScmProvidersResponse{
+		Data: []ScmProviderResource{
+			{
+				ID: "provider-2",
+				Attributes: ScmProviderAttributes{
+					ScmProviderType: "GITLAB",
+					URL:             "https://gitlab.com",
+				},
+			},
+		},
+	}
+
+	output := captureXcodeCloudStdout(t, func() error {
+		return PrintMarkdown(resp)
+	})
+
+	if !strings.Contains(output, "| ID | Provider Type | URL |") {
+		t.Fatalf("expected markdown header in output, got: %s", output)
+	}
+	if !strings.Contains(output, "gitlab.com") {
+		t.Fatalf("expected provider URL in output, got: %s", output)
+	}
+}
+
+func TestPrintTable_ScmGitReferences(t *testing.T) {
+	resp := &ScmGitReferencesResponse{
+		Data: []ScmGitReferenceResource{
+			{
+				ID: "ref-1",
+				Attributes: ScmGitReferenceAttributes{
+					Name:          "main",
+					CanonicalName: "refs/heads/main",
+					Kind:          "BRANCH",
+				},
+			},
+		},
+	}
+
+	output := captureXcodeCloudStdout(t, func() error {
+		return PrintTable(resp)
+	})
+
+	if !strings.Contains(output, "Canonical Name") {
+		t.Fatalf("expected header in output, got: %s", output)
+	}
+	if !strings.Contains(output, "refs/heads/main") {
+		t.Fatalf("expected canonical name in output, got: %s", output)
+	}
+}
+
+func TestPrintMarkdown_ScmGitReferences(t *testing.T) {
+	resp := &ScmGitReferencesResponse{
+		Data: []ScmGitReferenceResource{
+			{
+				ID: "ref-2",
+				Attributes: ScmGitReferenceAttributes{
+					Name:          "release",
+					CanonicalName: "refs/tags/release",
+					Kind:          "TAG",
+					IsDeleted:     true,
+				},
+			},
+		},
+	}
+
+	output := captureXcodeCloudStdout(t, func() error {
+		return PrintMarkdown(resp)
+	})
+
+	if !strings.Contains(output, "| ID | Name | Canonical Name |") {
+		t.Fatalf("expected markdown header in output, got: %s", output)
+	}
+	if !strings.Contains(output, "refs/tags/release") {
+		t.Fatalf("expected canonical name in output, got: %s", output)
+	}
+}
+
+func TestPrintTable_ScmPullRequests(t *testing.T) {
+	resp := &ScmPullRequestsResponse{
+		Data: []ScmPullRequestResource{
+			{
+				ID: "pr-1",
+				Attributes: ScmPullRequestAttributes{
+					Title:                      "Add feature",
+					Number:                     42,
+					SourceRepositoryOwner:      "org",
+					SourceRepositoryName:       "repo",
+					SourceBranchName:           "feature",
+					DestinationRepositoryOwner: "org",
+					DestinationRepositoryName:  "repo",
+					DestinationBranchName:      "main",
+					IsClosed:                   false,
+				},
+			},
+		},
+	}
+
+	output := captureXcodeCloudStdout(t, func() error {
+		return PrintTable(resp)
+	})
+
+	if !strings.Contains(output, "Pull") && !strings.Contains(output, "Source") {
+		t.Fatalf("expected header in output, got: %s", output)
+	}
+	if !strings.Contains(output, "feature") {
+		t.Fatalf("expected source branch in output, got: %s", output)
+	}
+}
+
+func TestPrintMarkdown_ScmPullRequests(t *testing.T) {
+	resp := &ScmPullRequestsResponse{
+		Data: []ScmPullRequestResource{
+			{
+				ID: "pr-2",
+				Attributes: ScmPullRequestAttributes{
+					Title:                      "Fix bug",
+					Number:                     7,
+					SourceRepositoryOwner:      "org",
+					SourceRepositoryName:       "repo",
+					SourceBranchName:           "bugfix",
+					DestinationRepositoryOwner: "org",
+					DestinationRepositoryName:  "repo",
+					DestinationBranchName:      "main",
+					IsClosed:                   true,
+				},
+			},
+		},
+	}
+
+	output := captureXcodeCloudStdout(t, func() error {
+		return PrintMarkdown(resp)
+	})
+
+	if !strings.Contains(output, "| ID | Number | Title |") {
+		t.Fatalf("expected markdown header in output, got: %s", output)
+	}
+	if !strings.Contains(output, "Fix bug") {
+		t.Fatalf("expected title in output, got: %s", output)
+	}
+}
+
 func TestPrintTable_CiMacOsVersions(t *testing.T) {
 	resp := &CiMacOsVersionsResponse{
 		Data: []CiMacOsVersionResource{

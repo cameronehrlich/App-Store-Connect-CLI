@@ -190,6 +190,98 @@ func printScmRepositoriesMarkdown(resp *ScmRepositoriesResponse) error {
 	return nil
 }
 
+func printScmProvidersTable(resp *ScmProvidersResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tProvider Type\tURL")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%s\t%s\n",
+			item.ID,
+			item.Attributes.ScmProviderType,
+			item.Attributes.URL,
+		)
+	}
+	return w.Flush()
+}
+
+func printScmProvidersMarkdown(resp *ScmProvidersResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Provider Type | URL |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %s | %s |\n",
+			escapeMarkdown(item.ID),
+			escapeMarkdown(item.Attributes.ScmProviderType),
+			escapeMarkdown(item.Attributes.URL),
+		)
+	}
+	return nil
+}
+
+func printScmGitReferencesTable(resp *ScmGitReferencesResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tName\tCanonical Name\tKind\tDeleted")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%t\n",
+			item.ID,
+			item.Attributes.Name,
+			item.Attributes.CanonicalName,
+			item.Attributes.Kind,
+			item.Attributes.IsDeleted,
+		)
+	}
+	return w.Flush()
+}
+
+func printScmGitReferencesMarkdown(resp *ScmGitReferencesResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Name | Canonical Name | Kind | Deleted |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %s | %s | %s | %t |\n",
+			escapeMarkdown(item.ID),
+			escapeMarkdown(item.Attributes.Name),
+			escapeMarkdown(item.Attributes.CanonicalName),
+			escapeMarkdown(item.Attributes.Kind),
+			item.Attributes.IsDeleted,
+		)
+	}
+	return nil
+}
+
+func printScmPullRequestsTable(resp *ScmPullRequestsResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tNumber\tTitle\tSource\tDestination\tClosed\tCross Repo\tWeb URL")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\t%t\t%t\t%s\n",
+			item.ID,
+			item.Attributes.Number,
+			item.Attributes.Title,
+			formatScmRef(item.Attributes.SourceRepositoryOwner, item.Attributes.SourceRepositoryName, item.Attributes.SourceBranchName),
+			formatScmRef(item.Attributes.DestinationRepositoryOwner, item.Attributes.DestinationRepositoryName, item.Attributes.DestinationBranchName),
+			item.Attributes.IsClosed,
+			item.Attributes.IsCrossRepository,
+			item.Attributes.WebURL,
+		)
+	}
+	return w.Flush()
+}
+
+func printScmPullRequestsMarkdown(resp *ScmPullRequestsResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Number | Title | Source | Destination | Closed | Cross Repo | Web URL |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- | --- | --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %d | %s | %s | %s | %t | %t | %s |\n",
+			escapeMarkdown(item.ID),
+			item.Attributes.Number,
+			escapeMarkdown(item.Attributes.Title),
+			escapeMarkdown(formatScmRef(item.Attributes.SourceRepositoryOwner, item.Attributes.SourceRepositoryName, item.Attributes.SourceBranchName)),
+			escapeMarkdown(formatScmRef(item.Attributes.DestinationRepositoryOwner, item.Attributes.DestinationRepositoryName, item.Attributes.DestinationBranchName)),
+			item.Attributes.IsClosed,
+			item.Attributes.IsCrossRepository,
+			escapeMarkdown(item.Attributes.WebURL),
+		)
+	}
+	return nil
+}
+
 func printCiMacOsVersionsTable(resp *CiMacOsVersionsResponse) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tVersion\tName")
@@ -240,6 +332,27 @@ func printCiXcodeVersionsMarkdown(resp *CiXcodeVersionsResponse) error {
 		)
 	}
 	return nil
+}
+
+func formatScmRef(owner, repo, branch string) string {
+	repoValue := formatScmRepo(owner, repo)
+	if branch == "" {
+		return repoValue
+	}
+	if repoValue == "" {
+		return branch
+	}
+	return fmt.Sprintf("%s:%s", repoValue, branch)
+}
+
+func formatScmRepo(owner, repo string) string {
+	if owner == "" {
+		return repo
+	}
+	if repo == "" {
+		return owner
+	}
+	return fmt.Sprintf("%s/%s", owner, repo)
 }
 
 func printCiBuildRunsTable(resp *CiBuildRunsResponse) error {

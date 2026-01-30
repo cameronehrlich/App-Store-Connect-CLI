@@ -571,8 +571,20 @@ func PrintMarkdown(data interface{}) error {
 		return printCiWorkflowsMarkdown(v)
 	case *CiWorkflowResponse:
 		return printCiWorkflowsMarkdown(&CiWorkflowsResponse{Data: []CiWorkflowResource{v.Data}})
+	case *ScmProvidersResponse:
+		return printScmProvidersMarkdown(v)
+	case *ScmProviderResponse:
+		return printScmProvidersMarkdown(&ScmProvidersResponse{Data: []ScmProviderResource{v.Data}, Links: v.Links})
 	case *ScmRepositoriesResponse:
 		return printScmRepositoriesMarkdown(v)
+	case *ScmGitReferencesResponse:
+		return printScmGitReferencesMarkdown(v)
+	case *ScmGitReferenceResponse:
+		return printScmGitReferencesMarkdown(&ScmGitReferencesResponse{Data: []ScmGitReferenceResource{v.Data}, Links: v.Links})
+	case *ScmPullRequestsResponse:
+		return printScmPullRequestsMarkdown(v)
+	case *ScmPullRequestResponse:
+		return printScmPullRequestsMarkdown(&ScmPullRequestsResponse{Data: []ScmPullRequestResource{v.Data}, Links: v.Links})
 	case *CiBuildRunsResponse:
 		return printCiBuildRunsMarkdown(v)
 	case *CiBuildRunResponse:
@@ -1221,8 +1233,20 @@ func PrintTable(data interface{}) error {
 		return printCiWorkflowsTable(v)
 	case *CiWorkflowResponse:
 		return printCiWorkflowsTable(&CiWorkflowsResponse{Data: []CiWorkflowResource{v.Data}})
+	case *ScmProvidersResponse:
+		return printScmProvidersTable(v)
+	case *ScmProviderResponse:
+		return printScmProvidersTable(&ScmProvidersResponse{Data: []ScmProviderResource{v.Data}, Links: v.Links})
 	case *ScmRepositoriesResponse:
 		return printScmRepositoriesTable(v)
+	case *ScmGitReferencesResponse:
+		return printScmGitReferencesTable(v)
+	case *ScmGitReferenceResponse:
+		return printScmGitReferencesTable(&ScmGitReferencesResponse{Data: []ScmGitReferenceResource{v.Data}, Links: v.Links})
+	case *ScmPullRequestsResponse:
+		return printScmPullRequestsTable(v)
+	case *ScmPullRequestResponse:
+		return printScmPullRequestsTable(&ScmPullRequestsResponse{Data: []ScmPullRequestResource{v.Data}, Links: v.Links})
 	case *CiBuildRunsResponse:
 		return printCiBuildRunsTable(v)
 	case *CiBuildRunResponse:

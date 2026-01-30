@@ -3388,6 +3388,224 @@ func TestDeleteCiWorkflow(t *testing.T) {
 	}
 }
 
+func TestGetScmProviders_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"scmProviders","id":"provider-1"}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmProviders" {
+			t.Fatalf("expected path /v1/scmProviders, got %s", req.URL.Path)
+		}
+		if got := req.URL.Query().Get("limit"); got != "25" {
+			t.Fatalf("expected limit=25, got %q", got)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmProviders(context.Background(), WithScmProvidersLimit(25)); err != nil {
+		t.Fatalf("GetScmProviders() error: %v", err)
+	}
+}
+
+func TestGetScmProviders_UsesNextURL(t *testing.T) {
+	next := "https://api.appstoreconnect.apple.com/v1/scmProviders?cursor=abc"
+	response := jsonResponse(http.StatusOK, `{"data":[]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.URL.String() != next {
+			t.Fatalf("expected next URL %q, got %q", next, req.URL.String())
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmProviders(context.Background(), WithScmProvidersNextURL(next)); err != nil {
+		t.Fatalf("GetScmProviders() error: %v", err)
+	}
+}
+
+func TestGetScmProvider(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"scmProviders","id":"provider-1"}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmProviders/provider-1" {
+			t.Fatalf("expected path /v1/scmProviders/provider-1, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmProvider(context.Background(), "provider-1"); err != nil {
+		t.Fatalf("GetScmProvider() error: %v", err)
+	}
+}
+
+func TestGetScmProviderRepositories_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"scmRepositories","id":"repo-1"}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmProviders/provider-1/repositories" {
+			t.Fatalf("expected path /v1/scmProviders/provider-1/repositories, got %s", req.URL.Path)
+		}
+		if got := req.URL.Query().Get("limit"); got != "10" {
+			t.Fatalf("expected limit=10, got %q", got)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmProviderRepositories(context.Background(), "provider-1", WithScmRepositoriesLimit(10)); err != nil {
+		t.Fatalf("GetScmProviderRepositories() error: %v", err)
+	}
+}
+
+func TestGetScmRepositories_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"scmRepositories","id":"repo-1"}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmRepositories" {
+			t.Fatalf("expected path /v1/scmRepositories, got %s", req.URL.Path)
+		}
+		if got := req.URL.Query().Get("limit"); got != "10" {
+			t.Fatalf("expected limit=10, got %q", got)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmRepositories(context.Background(), WithScmRepositoriesLimit(10)); err != nil {
+		t.Fatalf("GetScmRepositories() error: %v", err)
+	}
+}
+
+func TestGetScmRepositories_UsesNextURL(t *testing.T) {
+	next := "https://api.appstoreconnect.apple.com/v1/scmRepositories?cursor=abc"
+	response := jsonResponse(http.StatusOK, `{"data":[]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.URL.String() != next {
+			t.Fatalf("expected next URL %q, got %q", next, req.URL.String())
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmRepositories(context.Background(), WithScmRepositoriesNextURL(next)); err != nil {
+		t.Fatalf("GetScmRepositories() error: %v", err)
+	}
+}
+
+func TestGetScmRepository(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"scmRepositories","id":"repo-1"}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmRepositories/repo-1" {
+			t.Fatalf("expected path /v1/scmRepositories/repo-1, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmRepository(context.Background(), "repo-1"); err != nil {
+		t.Fatalf("GetScmRepository() error: %v", err)
+	}
+}
+
+func TestGetScmGitReference(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"scmGitReferences","id":"ref-1"}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmGitReferences/ref-1" {
+			t.Fatalf("expected path /v1/scmGitReferences/ref-1, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmGitReference(context.Background(), "ref-1"); err != nil {
+		t.Fatalf("GetScmGitReference() error: %v", err)
+	}
+}
+
+func TestGetScmRepositoryGitReferencesRelationships_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmRepositories/repo-1/relationships/gitReferences" {
+			t.Fatalf("expected path /v1/scmRepositories/repo-1/relationships/gitReferences, got %s", req.URL.Path)
+		}
+		if got := req.URL.Query().Get("limit"); got != "5" {
+			t.Fatalf("expected limit=5, got %q", got)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmRepositoryGitReferencesRelationships(context.Background(), "repo-1", WithLinkagesLimit(5)); err != nil {
+		t.Fatalf("GetScmRepositoryGitReferencesRelationships() error: %v", err)
+	}
+}
+
+func TestGetScmRepositoryPullRequests_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[{"type":"scmPullRequests","id":"pr-1"}]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmRepositories/repo-1/pullRequests" {
+			t.Fatalf("expected path /v1/scmRepositories/repo-1/pullRequests, got %s", req.URL.Path)
+		}
+		if got := req.URL.Query().Get("limit"); got != "20" {
+			t.Fatalf("expected limit=20, got %q", got)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmRepositoryPullRequests(context.Background(), "repo-1", WithScmPullRequestsLimit(20)); err != nil {
+		t.Fatalf("GetScmRepositoryPullRequests() error: %v", err)
+	}
+}
+
+func TestGetScmRepositoryPullRequestsRelationships_WithLimit(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":[]}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmRepositories/repo-1/relationships/pullRequests" {
+			t.Fatalf("expected path /v1/scmRepositories/repo-1/relationships/pullRequests, got %s", req.URL.Path)
+		}
+		if got := req.URL.Query().Get("limit"); got != "20" {
+			t.Fatalf("expected limit=20, got %q", got)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmRepositoryPullRequestsRelationships(context.Background(), "repo-1", WithLinkagesLimit(20)); err != nil {
+		t.Fatalf("GetScmRepositoryPullRequestsRelationships() error: %v", err)
+	}
+}
+
+func TestGetScmPullRequest(t *testing.T) {
+	response := jsonResponse(http.StatusOK, `{"data":{"type":"scmPullRequests","id":"pr-1"}}`)
+	client := newTestClient(t, func(req *http.Request) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", req.Method)
+		}
+		if req.URL.Path != "/v1/scmPullRequests/pr-1" {
+			t.Fatalf("expected path /v1/scmPullRequests/pr-1, got %s", req.URL.Path)
+		}
+		assertAuthorized(t, req)
+	}, response)
+
+	if _, err := client.GetScmPullRequest(context.Background(), "pr-1"); err != nil {
+		t.Fatalf("GetScmPullRequest() error: %v", err)
+	}
+}
+
 func TestGetScmGitReferences_WithLimit(t *testing.T) {
 	response := jsonResponse(http.StatusOK, `{"data":[{"type":"scmGitReferences","id":"ref-1"}]}`)
 	client := newTestClient(t, func(req *http.Request) {

@@ -27,6 +27,7 @@ Examples:
   asc xcode-cloud workflows --app "APP_ID"
   asc xcode-cloud build-runs --workflow-id "WORKFLOW_ID"
   asc xcode-cloud actions --run-id "BUILD_RUN_ID"
+  asc xcode-cloud scm providers list
   asc xcode-cloud run --app "APP_ID" --workflow "WorkflowName" --branch "main"
   asc xcode-cloud run --workflow-id "WORKFLOW_ID" --git-reference-id "REF_ID"
   asc xcode-cloud run --app "APP_ID" --workflow "Deploy" --branch "main" --wait
@@ -39,6 +40,7 @@ Examples:
 			XcodeCloudStatusCommand(),
 			XcodeCloudProductsCommand(),
 			XcodeCloudWorkflowsCommand(),
+			XcodeCloudScmCommand(),
 			XcodeCloudBuildRunsCommand(),
 			XcodeCloudActionsCommand(),
 			XcodeCloudArtifactsCommand(),
