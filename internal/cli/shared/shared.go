@@ -46,17 +46,35 @@ var (
 	privateKeyTempPaths []string
 	selectedProfile     string
 	strictAuth          bool
+	noProgress          bool
 )
+
+var isTerminal = term.IsTerminal
 
 // BindRootFlags registers root-level flags that affect shared CLI behavior.
 func BindRootFlags(fs *flag.FlagSet) {
 	fs.StringVar(&selectedProfile, "profile", "", "Use named authentication profile")
 	fs.BoolVar(&strictAuth, "strict-auth", false, "Fail when credentials are resolved from multiple sources")
+	fs.BoolVar(&noProgress, "no-progress", false, "Disable progress indicators and status updates")
 }
 
 // SelectedProfile returns the current profile override.
 func SelectedProfile() string {
 	return selectedProfile
+}
+
+// ProgressEnabled reports whether it's safe/appropriate to emit progress messages.
+// Progress must be stderr-only and must not appear when stderr is non-interactive.
+func ProgressEnabled() bool {
+	if noProgress {
+		return false
+	}
+	return isTerminal(int(os.Stderr.Fd()))
+}
+
+// SetNoProgress sets progress suppression (tests only).
+func SetNoProgress(value bool) {
+	noProgress = value
 }
 
 // SetSelectedProfile sets the current profile override (tests only).
@@ -85,7 +103,7 @@ func supportsANSI() bool {
 	if strings.EqualFold(os.Getenv("TERM"), "dumb") {
 		return false
 	}
-	return term.IsTerminal(int(os.Stderr.Fd()))
+	return isTerminal(int(os.Stderr.Fd()))
 }
 
 // DefaultUsageFunc returns a usage string with bold section headers

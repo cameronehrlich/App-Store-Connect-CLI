@@ -73,6 +73,54 @@ func captureOutput(t *testing.T, fn func()) (string, string) {
 	return stdout, stderr
 }
 
+func TestProgressEnabled_RespectsNoProgressFlag(t *testing.T) {
+	prevNoProgress := noProgress
+	prevIsTerminal := isTerminal
+	t.Cleanup(func() {
+		SetNoProgress(prevNoProgress)
+		isTerminal = prevIsTerminal
+	})
+
+	isTerminal = func(int) bool { return true }
+	SetNoProgress(true)
+
+	if ProgressEnabled() {
+		t.Fatal("expected progress to be disabled when --no-progress is set")
+	}
+}
+
+func TestProgressEnabled_DisabledWhenStderrNotTTY(t *testing.T) {
+	prevNoProgress := noProgress
+	prevIsTerminal := isTerminal
+	t.Cleanup(func() {
+		SetNoProgress(prevNoProgress)
+		isTerminal = prevIsTerminal
+	})
+
+	isTerminal = func(int) bool { return false }
+	SetNoProgress(false)
+
+	if ProgressEnabled() {
+		t.Fatal("expected progress to be disabled when stderr is not a TTY")
+	}
+}
+
+func TestProgressEnabled_EnabledWhenTTYAndNotDisabled(t *testing.T) {
+	prevNoProgress := noProgress
+	prevIsTerminal := isTerminal
+	t.Cleanup(func() {
+		SetNoProgress(prevNoProgress)
+		isTerminal = prevIsTerminal
+	})
+
+	isTerminal = func(int) bool { return true }
+	SetNoProgress(false)
+
+	if !ProgressEnabled() {
+		t.Fatal("expected progress to be enabled when stderr is a TTY and --no-progress is not set")
+	}
+}
+
 func TestResolvePrivateKeyPathPrefersPath(t *testing.T) {
 	resetPrivateKeyTemp(t)
 	t.Setenv("ASC_PRIVATE_KEY_PATH", "/tmp/AuthKey.p8")
@@ -335,5 +383,54 @@ func writeECDSAPEM(t *testing.T, path string) {
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write key file error: %v", err)
+	}
+}
+
+func TestProgressEnabled_DisabledByFlag(t *testing.T) {
+	previousNoProgress := noProgress
+	t.Cleanup(func() {
+		noProgress = previousNoProgress
+	})
+
+	SetNoProgress(true)
+	if ProgressEnabled() {
+		t.Fatal("expected ProgressEnabled() to return false when noProgress is true")
+	}
+
+	SetNoProgress(false)
+	// Progress should still be disabled in tests because stderr is piped (not a TTY)
+	if ProgressEnabled() {
+		t.Fatal("expected ProgressEnabled() to return false in test environment (stderr not a TTY)")
+	}
+}
+
+func TestProgressEnabled_DisabledInNonTTY(t *testing.T) {
+	previousNoProgress := noProgress
+	noProgress = false
+	t.Cleanup(func() {
+		noProgress = previousNoProgress
+	})
+
+	// In test environment, stderr is piped (not a TTY)
+	// So ProgressEnabled should return false regardless of flag
+	if ProgressEnabled() {
+		t.Fatal("expected ProgressEnabled() to return false when stderr is not a TTY")
+	}
+}
+
+func TestSetNoProgress(t *testing.T) {
+	previousNoProgress := noProgress
+	t.Cleanup(func() {
+		noProgress = previousNoProgress
+	})
+
+	SetNoProgress(true)
+	if !noProgress {
+		t.Fatal("expected noProgress to be true after SetNoProgress(true)")
+	}
+
+	SetNoProgress(false)
+	if noProgress {
+		t.Fatal("expected noProgress to be false after SetNoProgress(false)")
 	}
 }
