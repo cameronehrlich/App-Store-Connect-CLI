@@ -14,6 +14,9 @@ type ReviewOption func(*reviewQuery)
 // AppsOption is a functional option for GetApps.
 type AppsOption func(*appsQuery)
 
+// AppSearchKeywordsOption is a functional option for GetAppSearchKeywords.
+type AppSearchKeywordsOption func(*appSearchKeywordsQuery)
+
 // AppClipsOption is a functional option for GetAppClips.
 type AppClipsOption func(*appClipsQuery)
 
@@ -61,6 +64,9 @@ type WinBackOfferPricesOption func(*winBackOfferPricesQuery)
 
 // AppStoreVersionsOption is a functional option for GetAppStoreVersions.
 type AppStoreVersionsOption func(*appStoreVersionsQuery)
+
+// AppStoreVersionOption is a functional option for GetAppStoreVersion.
+type AppStoreVersionOption func(*appStoreVersionQuery)
 
 // ReviewSubmissionsOption is a functional option for GetReviewSubmissions.
 type ReviewSubmissionsOption func(*reviewSubmissionsQuery)
@@ -155,6 +161,9 @@ type BetaBuildLocalizationsOption func(*betaBuildLocalizationsQuery)
 // AppInfoLocalizationsOption is a functional option for app info localizations.
 type AppInfoLocalizationsOption func(*appInfoLocalizationsQuery)
 
+// AppInfoOption is a functional option for GetAppInfo.
+type AppInfoOption func(*appInfoQuery)
+
 // AppCustomProductPagesOption is a functional option for custom product page list endpoints.
 type AppCustomProductPagesOption func(*appCustomProductPagesQuery)
 
@@ -169,6 +178,12 @@ type AppCustomProductPageLocalizationPreviewSetsOption func(*appCustomProductPag
 
 // AppCustomProductPageLocalizationScreenshotSetsOption is a functional option for screenshot set list endpoints.
 type AppCustomProductPageLocalizationScreenshotSetsOption func(*appCustomProductPageLocalizationScreenshotSetsQuery)
+
+// AppStoreVersionLocalizationPreviewSetsOption is a functional option for app store version preview sets list endpoints.
+type AppStoreVersionLocalizationPreviewSetsOption func(*appStoreVersionLocalizationPreviewSetsQuery)
+
+// AppStoreVersionLocalizationScreenshotSetsOption is a functional option for app store version screenshot sets list endpoints.
+type AppStoreVersionLocalizationScreenshotSetsOption func(*appStoreVersionLocalizationScreenshotSetsQuery)
 
 // AppStoreVersionExperimentsOption is a functional option for app store version experiment list endpoints (v1).
 type AppStoreVersionExperimentsOption func(*appStoreVersionExperimentsQuery)
@@ -1034,6 +1049,38 @@ func WithAppsSKUs(skus []string) AppsOption {
 	}
 }
 
+// WithAppSearchKeywordsLimit sets the max number of app keywords to return.
+func WithAppSearchKeywordsLimit(limit int) AppSearchKeywordsOption {
+	return func(q *appSearchKeywordsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithAppSearchKeywordsNextURL uses a next page URL directly.
+func WithAppSearchKeywordsNextURL(next string) AppSearchKeywordsOption {
+	return func(q *appSearchKeywordsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithAppSearchKeywordsPlatforms filters app keywords by platform(s).
+func WithAppSearchKeywordsPlatforms(platforms []string) AppSearchKeywordsOption {
+	return func(q *appSearchKeywordsQuery) {
+		q.platforms = normalizeUpperList(platforms)
+	}
+}
+
+// WithAppSearchKeywordsLocales filters app keywords by locale(s).
+func WithAppSearchKeywordsLocales(locales []string) AppSearchKeywordsOption {
+	return func(q *appSearchKeywordsQuery) {
+		q.locales = normalizeList(locales)
+	}
+}
+
 // WithAppClipsLimit sets the max number of App Clips to return.
 func WithAppClipsLimit(limit int) AppClipsOption {
 	return func(q *appClipsQuery) {
@@ -1441,6 +1488,20 @@ func WithAppStoreVersionsVersionStrings(versions []string) AppStoreVersionsOptio
 func WithAppStoreVersionsStates(states []string) AppStoreVersionsOption {
 	return func(q *appStoreVersionsQuery) {
 		q.states = normalizeUpperList(states)
+	}
+}
+
+// WithAppStoreVersionsInclude includes related resources for versions.
+func WithAppStoreVersionsInclude(include []string) AppStoreVersionsOption {
+	return func(q *appStoreVersionsQuery) {
+		q.include = normalizeList(include)
+	}
+}
+
+// WithAppStoreVersionInclude includes related resources for a version.
+func WithAppStoreVersionInclude(include []string) AppStoreVersionOption {
+	return func(q *appStoreVersionQuery) {
+		q.include = normalizeList(include)
 	}
 }
 
@@ -2553,6 +2614,13 @@ func WithAppInfoLocalizationLocales(locales []string) AppInfoLocalizationsOption
 	}
 }
 
+// WithAppInfoInclude includes related resources for an app info.
+func WithAppInfoInclude(include []string) AppInfoOption {
+	return func(q *appInfoQuery) {
+		q.include = normalizeList(include)
+	}
+}
+
 // WithTerritoriesLimit sets the max number of territories to return.
 func WithTerritoriesLimit(limit int) TerritoriesOption {
 	return func(q *territoriesQuery) {
@@ -2812,6 +2880,42 @@ func WithAppCustomProductPageLocalizationScreenshotSetsLimit(limit int) AppCusto
 // WithAppCustomProductPageLocalizationScreenshotSetsNextURL uses a next page URL directly.
 func WithAppCustomProductPageLocalizationScreenshotSetsNextURL(next string) AppCustomProductPageLocalizationScreenshotSetsOption {
 	return func(q *appCustomProductPageLocalizationScreenshotSetsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithAppStoreVersionLocalizationPreviewSetsLimit sets the max number of preview sets to return.
+func WithAppStoreVersionLocalizationPreviewSetsLimit(limit int) AppStoreVersionLocalizationPreviewSetsOption {
+	return func(q *appStoreVersionLocalizationPreviewSetsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithAppStoreVersionLocalizationPreviewSetsNextURL uses a next page URL directly.
+func WithAppStoreVersionLocalizationPreviewSetsNextURL(next string) AppStoreVersionLocalizationPreviewSetsOption {
+	return func(q *appStoreVersionLocalizationPreviewSetsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+// WithAppStoreVersionLocalizationScreenshotSetsLimit sets the max number of screenshot sets to return.
+func WithAppStoreVersionLocalizationScreenshotSetsLimit(limit int) AppStoreVersionLocalizationScreenshotSetsOption {
+	return func(q *appStoreVersionLocalizationScreenshotSetsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithAppStoreVersionLocalizationScreenshotSetsNextURL uses a next page URL directly.
+func WithAppStoreVersionLocalizationScreenshotSetsNextURL(next string) AppStoreVersionLocalizationScreenshotSetsOption {
+	return func(q *appStoreVersionLocalizationScreenshotSetsQuery) {
 		if strings.TrimSpace(next) != "" {
 			q.nextURL = strings.TrimSpace(next)
 		}

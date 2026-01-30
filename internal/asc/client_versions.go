@@ -219,8 +219,17 @@ func (c *Client) GetPreReleaseVersion(ctx context.Context, id string) (*PreRelea
 }
 
 // GetAppStoreVersion retrieves an app store version by ID.
-func (c *Client) GetAppStoreVersion(ctx context.Context, versionID string) (*AppStoreVersionResponse, error) {
+func (c *Client) GetAppStoreVersion(ctx context.Context, versionID string, opts ...AppStoreVersionOption) (*AppStoreVersionResponse, error) {
+	query := &appStoreVersionQuery{}
+	for _, opt := range opts {
+		opt(query)
+	}
+
 	path := fmt.Sprintf("/v1/appStoreVersions/%s", versionID)
+	if queryString := buildAppStoreVersionQuery(query); queryString != "" {
+		path += "?" + queryString
+	}
+
 	data, err := c.do(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err

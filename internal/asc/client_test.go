@@ -720,6 +720,7 @@ func TestBuildAppStoreVersionsQuery(t *testing.T) {
 		WithAppStoreVersionsPlatforms([]string{"ios", "MAC_OS"}),
 		WithAppStoreVersionsVersionStrings([]string{"1.0.0", "1.1.0"}),
 		WithAppStoreVersionsStates([]string{"ready_for_review"}),
+		WithAppStoreVersionsInclude([]string{"appStoreReviewDetail"}),
 	}
 	for _, opt := range opts {
 		opt(query)
@@ -738,8 +739,63 @@ func TestBuildAppStoreVersionsQuery(t *testing.T) {
 	if got := values.Get("filter[appStoreState]"); got != "READY_FOR_REVIEW" {
 		t.Fatalf("expected filter[appStoreState]=READY_FOR_REVIEW, got %q", got)
 	}
+	if got := values.Get("include"); got != "appStoreReviewDetail" {
+		t.Fatalf("expected include=appStoreReviewDetail, got %q", got)
+	}
 	if got := values.Get("limit"); got != "20" {
 		t.Fatalf("expected limit=20, got %q", got)
+	}
+}
+
+func TestBuildAppSearchKeywordsQuery(t *testing.T) {
+	query := &appSearchKeywordsQuery{}
+	opts := []AppSearchKeywordsOption{
+		WithAppSearchKeywordsLimit(15),
+		WithAppSearchKeywordsPlatforms([]string{"ios", "MAC_OS"}),
+		WithAppSearchKeywordsLocales([]string{"en-US", "ja"}),
+	}
+	for _, opt := range opts {
+		opt(query)
+	}
+
+	values, err := url.ParseQuery(buildAppSearchKeywordsQuery(query))
+	if err != nil {
+		t.Fatalf("failed to parse query: %v", err)
+	}
+	if got := values.Get("filter[platform]"); got != "IOS,MAC_OS" {
+		t.Fatalf("expected filter[platform]=IOS,MAC_OS, got %q", got)
+	}
+	if got := values.Get("filter[locale]"); got != "en-US,ja" {
+		t.Fatalf("expected filter[locale]=en-US,ja, got %q", got)
+	}
+	if got := values.Get("limit"); got != "15" {
+		t.Fatalf("expected limit=15, got %q", got)
+	}
+}
+
+func TestBuildAppStoreVersionQuery(t *testing.T) {
+	query := &appStoreVersionQuery{}
+	WithAppStoreVersionInclude([]string{"appStoreReviewDetail", "ageRatingDeclaration"})(query)
+
+	values, err := url.ParseQuery(buildAppStoreVersionQuery(query))
+	if err != nil {
+		t.Fatalf("failed to parse query: %v", err)
+	}
+	if got := values.Get("include"); got != "appStoreReviewDetail,ageRatingDeclaration" {
+		t.Fatalf("expected include=appStoreReviewDetail,ageRatingDeclaration, got %q", got)
+	}
+}
+
+func TestBuildAppInfoQuery(t *testing.T) {
+	query := &appInfoQuery{}
+	WithAppInfoInclude([]string{"ageRatingDeclaration", "territoryAgeRatings"})(query)
+
+	values, err := url.ParseQuery(buildAppInfoQuery(query))
+	if err != nil {
+		t.Fatalf("failed to parse query: %v", err)
+	}
+	if got := values.Get("include"); got != "ageRatingDeclaration,territoryAgeRatings" {
+		t.Fatalf("expected include=ageRatingDeclaration,territoryAgeRatings, got %q", got)
 	}
 }
 

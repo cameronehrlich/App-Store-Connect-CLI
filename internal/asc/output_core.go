@@ -57,6 +57,12 @@ func PrintMarkdown(data interface{}) error {
 		return printAppClipsMarkdown(v)
 	case *AppCategoriesResponse:
 		return printAppCategoriesMarkdown(v)
+	case *AppCategoryResponse:
+		return printAppCategoriesMarkdown(&AppCategoriesResponse{Data: []AppCategory{v.Data}})
+	case *AppInfosResponse:
+		return printAppInfosMarkdown(v)
+	case *AppInfoResponse:
+		return printAppInfosMarkdown(&AppInfosResponse{Data: []Resource[AppInfoAttributes]{v.Data}})
 	case *AppResponse:
 		return printAppsMarkdown(&AppsResponse{Data: []Resource[AppAttributes]{v.Data}})
 	case *AppClipResponse:
@@ -140,6 +146,34 @@ func PrintMarkdown(data interface{}) error {
 	case *AppClipDefaultExperienceReleaseWithAppStoreVersionLinkageResponse:
 		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
 	case *AppClipDefaultExperienceLocalizationHeaderImageLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionAgeRatingDeclarationLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionReviewDetailLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionAppClipDefaultExperienceLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionSubmissionLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionRoutingAppCoverageLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionAlternativeDistributionPackageLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionGameCenterAppVersionLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoAgeRatingDeclarationLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoPrimaryCategoryLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoPrimarySubcategoryOneLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoPrimarySubcategoryTwoLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoSecondaryCategoryLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoSecondarySubcategoryOneLinkageResponse:
+		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoSecondarySubcategoryTwoLinkageResponse:
 		return printLinkagesMarkdown(&LinkagesResponse{Data: []ResourceData{v.Data}})
 	case *BundleIDsResponse:
 		return printBundleIDsMarkdown(v)
@@ -409,6 +443,18 @@ func PrintMarkdown(data interface{}) error {
 		return printAnalyticsReportDownloadResultMarkdown(v)
 	case *AnalyticsReportGetResult:
 		return printAnalyticsReportGetResultMarkdown(v)
+	case *AnalyticsReportsResponse:
+		return printAnalyticsReportsMarkdown(v)
+	case *AnalyticsReportResponse:
+		return printAnalyticsReportsMarkdown(&AnalyticsReportsResponse{Data: []Resource[AnalyticsReportAttributes]{v.Data}, Links: v.Links})
+	case *AnalyticsReportInstancesResponse:
+		return printAnalyticsReportInstancesMarkdown(v)
+	case *AnalyticsReportInstanceResponse:
+		return printAnalyticsReportInstancesMarkdown(&AnalyticsReportInstancesResponse{Data: []Resource[AnalyticsReportInstanceAttributes]{v.Data}, Links: v.Links})
+	case *AnalyticsReportSegmentsResponse:
+		return printAnalyticsReportSegmentsMarkdown(v)
+	case *AnalyticsReportSegmentResponse:
+		return printAnalyticsReportSegmentsMarkdown(&AnalyticsReportSegmentsResponse{Data: []Resource[AnalyticsReportSegmentAttributes]{v.Data}, Links: v.Links})
 	case *AppStoreVersionSubmissionResult:
 		return printAppStoreVersionSubmissionMarkdown(v)
 	case *AppStoreVersionSubmissionCreateResult:
@@ -715,6 +761,12 @@ func PrintTable(data interface{}) error {
 		return printAppClipsTable(v)
 	case *AppCategoriesResponse:
 		return printAppCategoriesTable(v)
+	case *AppCategoryResponse:
+		return printAppCategoriesTable(&AppCategoriesResponse{Data: []AppCategory{v.Data}})
+	case *AppInfosResponse:
+		return printAppInfosTable(v)
+	case *AppInfoResponse:
+		return printAppInfosTable(&AppInfosResponse{Data: []Resource[AppInfoAttributes]{v.Data}})
 	case *AppResponse:
 		return printAppsTable(&AppsResponse{Data: []Resource[AppAttributes]{v.Data}})
 	case *AppClipResponse:
@@ -798,6 +850,34 @@ func PrintTable(data interface{}) error {
 	case *AppClipDefaultExperienceReleaseWithAppStoreVersionLinkageResponse:
 		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
 	case *AppClipDefaultExperienceLocalizationHeaderImageLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionAgeRatingDeclarationLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionReviewDetailLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionAppClipDefaultExperienceLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionSubmissionLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionRoutingAppCoverageLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionAlternativeDistributionPackageLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppStoreVersionGameCenterAppVersionLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoAgeRatingDeclarationLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoPrimaryCategoryLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoPrimarySubcategoryOneLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoPrimarySubcategoryTwoLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoSecondaryCategoryLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoSecondarySubcategoryOneLinkageResponse:
+		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
+	case *AppInfoSecondarySubcategoryTwoLinkageResponse:
 		return printLinkagesTable(&LinkagesResponse{Data: []ResourceData{v.Data}})
 	case *BundleIDsResponse:
 		return printBundleIDsTable(v)
@@ -1067,6 +1147,18 @@ func PrintTable(data interface{}) error {
 		return printAnalyticsReportDownloadResultTable(v)
 	case *AnalyticsReportGetResult:
 		return printAnalyticsReportGetResultTable(v)
+	case *AnalyticsReportsResponse:
+		return printAnalyticsReportsTable(v)
+	case *AnalyticsReportResponse:
+		return printAnalyticsReportsTable(&AnalyticsReportsResponse{Data: []Resource[AnalyticsReportAttributes]{v.Data}, Links: v.Links})
+	case *AnalyticsReportInstancesResponse:
+		return printAnalyticsReportInstancesTable(v)
+	case *AnalyticsReportInstanceResponse:
+		return printAnalyticsReportInstancesTable(&AnalyticsReportInstancesResponse{Data: []Resource[AnalyticsReportInstanceAttributes]{v.Data}, Links: v.Links})
+	case *AnalyticsReportSegmentsResponse:
+		return printAnalyticsReportSegmentsTable(v)
+	case *AnalyticsReportSegmentResponse:
+		return printAnalyticsReportSegmentsTable(&AnalyticsReportSegmentsResponse{Data: []Resource[AnalyticsReportSegmentAttributes]{v.Data}, Links: v.Links})
 	case *AppStoreVersionSubmissionResult:
 		return printAppStoreVersionSubmissionTable(v)
 	case *AppStoreVersionSubmissionCreateResult:

@@ -1,0 +1,68 @@
+package cmdtest
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"io"
+	"strings"
+	"testing"
+)
+
+func TestAnalyticsValidationErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "reports get missing report id",
+			args:    []string{"analytics", "reports", "get"},
+			wantErr: "--report-id is required",
+		},
+		{
+			name:    "reports relationships missing report id",
+			args:    []string{"analytics", "reports", "relationships"},
+			wantErr: "--report-id is required",
+		},
+		{
+			name:    "instances get missing instance id",
+			args:    []string{"analytics", "instances", "get"},
+			wantErr: "--instance-id is required",
+		},
+		{
+			name:    "instances relationships missing instance id",
+			args:    []string{"analytics", "instances", "relationships"},
+			wantErr: "--instance-id is required",
+		},
+		{
+			name:    "segments get missing segment id",
+			args:    []string{"analytics", "segments", "get"},
+			wantErr: "--segment-id is required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				err := root.Run(context.Background())
+				if !errors.Is(err, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", err)
+				}
+			})
+
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if !strings.Contains(stderr, test.wantErr) {
+				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			}
+		})
+	}
+}

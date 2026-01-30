@@ -121,3 +121,69 @@ func (c *Client) UpdateApp(ctx context.Context, appID string, attrs AppUpdateAtt
 
 	return &response, nil
 }
+
+// GetAppSearchKeywords retrieves search keywords for an app.
+func (c *Client) GetAppSearchKeywords(ctx context.Context, appID string, opts ...AppSearchKeywordsOption) (*AppKeywordsResponse, error) {
+	query := &appSearchKeywordsQuery{}
+	for _, opt := range opts {
+		opt(query)
+	}
+
+	appID = strings.TrimSpace(appID)
+	if query.nextURL == "" && appID == "" {
+		return nil, fmt.Errorf("appID is required")
+	}
+
+	path := fmt.Sprintf("/v1/apps/%s/searchKeywords", appID)
+	if query.nextURL != "" {
+		if err := validateNextURL(query.nextURL); err != nil {
+			return nil, fmt.Errorf("searchKeywords: %w", err)
+		}
+		path = query.nextURL
+	} else if queryString := buildAppSearchKeywordsQuery(query); queryString != "" {
+		path += "?" + queryString
+	}
+
+	data, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppKeywordsResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// SetAppSearchKeywords replaces the search keywords for an app.
+func (c *Client) SetAppSearchKeywords(ctx context.Context, appID string, keywords []string) error {
+	appID = strings.TrimSpace(appID)
+	keywords = normalizeList(keywords)
+	if appID == "" {
+		return fmt.Errorf("appID is required")
+	}
+	if len(keywords) == 0 {
+		return fmt.Errorf("keywords are required")
+	}
+
+	payload := RelationshipRequest{
+		Data: make([]RelationshipData, 0, len(keywords)),
+	}
+	for _, keyword := range keywords {
+		payload.Data = append(payload.Data, RelationshipData{
+			Type: ResourceTypeAppKeywords,
+			ID:   keyword,
+		})
+	}
+
+	body, err := BuildRequestBody(payload)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/v1/apps/%s/relationships/searchKeywords", appID)
+	_, err = c.do(ctx, "PATCH", path, body)
+	return err
+}

@@ -23,11 +23,17 @@ func CategoriesCommand() *ffcli.Command {
 
 Examples:
   asc categories list
+  asc categories get --category-id "GAMES"
+  asc categories parent --category-id "GAMES"
+  asc categories subcategories --category-id "GAMES"
   asc categories set --app APP_ID --primary GAMES`,
 		FlagSet:   fs,
 		UsageFunc: DefaultUsageFunc,
 		Subcommands: []*ffcli.Command{
 			CategoriesListCommand(),
+			CategoriesGetCommand(),
+			CategoriesParentCommand(),
+			CategoriesSubcategoriesCommand(),
 			CategoriesSetCommand(),
 		},
 		Exec: func(ctx context.Context, args []string) error {

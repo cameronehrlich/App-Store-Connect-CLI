@@ -52,6 +52,12 @@ type appsQuery struct {
 	skus      []string
 }
 
+type appSearchKeywordsQuery struct {
+	listQuery
+	platforms []string
+	locales   []string
+}
+
 type appClipsQuery struct {
 	listQuery
 	bundleIDs []string
@@ -210,6 +216,11 @@ type appStoreVersionsQuery struct {
 	platforms      []string
 	versionStrings []string
 	states         []string
+	include        []string
+}
+
+type appStoreVersionQuery struct {
+	include []string
 }
 
 type reviewSubmissionsQuery struct {
@@ -243,6 +254,10 @@ type appInfoLocalizationsQuery struct {
 	locales []string
 }
 
+type appInfoQuery struct {
+	include []string
+}
+
 type appCustomProductPagesQuery struct {
 	listQuery
 }
@@ -260,6 +275,14 @@ type appCustomProductPageLocalizationPreviewSetsQuery struct {
 }
 
 type appCustomProductPageLocalizationScreenshotSetsQuery struct {
+	listQuery
+}
+
+type appStoreVersionLocalizationPreviewSetsQuery struct {
+	listQuery
+}
+
+type appStoreVersionLocalizationScreenshotSetsQuery struct {
 	listQuery
 }
 
@@ -1137,12 +1160,27 @@ func buildWinBackOfferPricesQuery(query *winBackOfferPricesQuery) string {
 	return values.Encode()
 }
 
+func buildAppSearchKeywordsQuery(query *appSearchKeywordsQuery) string {
+	values := url.Values{}
+	addCSV(values, "filter[platform]", query.platforms)
+	addCSV(values, "filter[locale]", query.locales)
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
 func buildAppStoreVersionsQuery(query *appStoreVersionsQuery) string {
 	values := url.Values{}
 	addCSV(values, "filter[platform]", query.platforms)
 	addCSV(values, "filter[versionString]", query.versionStrings)
 	addCSV(values, "filter[appStoreState]", query.states)
+	addCSV(values, "include", query.include)
 	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildAppStoreVersionQuery(query *appStoreVersionQuery) string {
+	values := url.Values{}
+	addCSV(values, "include", query.include)
 	return values.Encode()
 }
 
@@ -1196,6 +1234,12 @@ func buildAppInfoLocalizationsQuery(query *appInfoLocalizationsQuery) string {
 	return values.Encode()
 }
 
+func buildAppInfoQuery(query *appInfoQuery) string {
+	values := url.Values{}
+	addCSV(values, "include", query.include)
+	return values.Encode()
+}
+
 func buildAppCustomProductPagesQuery(query *appCustomProductPagesQuery) string {
 	values := url.Values{}
 	addLimit(values, query.limit)
@@ -1221,6 +1265,18 @@ func buildAppCustomProductPageLocalizationPreviewSetsQuery(query *appCustomProdu
 }
 
 func buildAppCustomProductPageLocalizationScreenshotSetsQuery(query *appCustomProductPageLocalizationScreenshotSetsQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildAppStoreVersionLocalizationPreviewSetsQuery(query *appStoreVersionLocalizationPreviewSetsQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+func buildAppStoreVersionLocalizationScreenshotSetsQuery(query *appStoreVersionLocalizationScreenshotSetsQuery) string {
 	values := url.Values{}
 	addLimit(values, query.limit)
 	return values.Encode()

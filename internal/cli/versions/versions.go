@@ -22,6 +22,7 @@ func VersionsCommand() *ffcli.Command {
 		Subcommands: []*ffcli.Command{
 			VersionsListCommand(),
 			VersionsGetCommand(),
+			VersionsRelationshipsCommand(),
 			VersionsCreateCommand(),
 			VersionsUpdateCommand(),
 			VersionsDeleteCommand(),
@@ -136,6 +137,7 @@ func VersionsGetCommand() *ffcli.Command {
 	versionID := fs.String("version-id", "", "App Store version ID (required)")
 	includeBuild := fs.Bool("include-build", false, "Include attached build information")
 	includeSubmission := fs.Bool("include-submission", false, "Include submission information")
+	include := fs.String("include", "", "Include related resources: "+strings.Join(appStoreVersionIncludeList(), ", "))
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
 
@@ -147,11 +149,13 @@ func VersionsGetCommand() *ffcli.Command {
 
 Examples:
   asc versions get --version-id "VERSION_ID"
-  asc versions get --version-id "VERSION_ID" --include-build --include-submission`,
+  asc versions get --version-id "VERSION_ID" --include-build --include-submission
+  asc versions get --version-id "VERSION_ID" --include "ageRatingDeclaration,appStoreReviewDetail"`,
 		FlagSet:   fs,
 		UsageFunc: DefaultUsageFunc,
 		Exec: func(ctx context.Context, args []string) error {
-			if strings.TrimSpace(*versionID) == "" {
+			trimmedID := strings.TrimSpace(*versionID)
+			if trimmedID == "" {
 				fmt.Fprintln(os.Stderr, "Error: --version-id is required")
 				return flag.ErrHelp
 			}
@@ -164,7 +168,23 @@ Examples:
 			requestCtx, cancel := contextWithTimeout(ctx)
 			defer cancel()
 
-			versionResp, err := client.GetAppStoreVersion(requestCtx, strings.TrimSpace(*versionID))
+			includeValues, err := normalizeAppStoreVersionInclude(*include)
+			if err != nil {
+				return fmt.Errorf("versions get: %w", err)
+			}
+			if len(includeValues) > 0 {
+				if *includeBuild || *includeSubmission {
+					fmt.Fprintln(os.Stderr, "Error: --include cannot be used with --include-build or --include-submission")
+					return flag.ErrHelp
+				}
+				versionResp, err := client.GetAppStoreVersion(requestCtx, trimmedID, asc.WithAppStoreVersionInclude(includeValues))
+				if err != nil {
+					return fmt.Errorf("versions get: %w", err)
+				}
+				return printOutput(versionResp, *output, *pretty)
+			}
+
+			versionResp, err := client.GetAppStoreVersion(requestCtx, trimmedID)
 			if err != nil {
 				return fmt.Errorf("versions get: %w", err)
 			}
@@ -177,7 +197,7 @@ Examples:
 			}
 
 			if *includeBuild {
-				buildResp, err := fetchOptionalBuild(requestCtx, strings.TrimSpace(*versionID), client.GetAppStoreVersionBuild)
+				buildResp, err := fetchOptionalBuild(requestCtx, trimmedID, client.GetAppStoreVersionBuild)
 				if err != nil {
 					return fmt.Errorf("versions get: %w", err)
 				}
@@ -188,7 +208,7 @@ Examples:
 			}
 
 			if *includeSubmission {
-				submissionResp, err := fetchOptionalSubmission(requestCtx, strings.TrimSpace(*versionID), client.GetAppStoreVersionSubmissionForVersion)
+				submissionResp, err := fetchOptionalSubmission(requestCtx, trimmedID, client.GetAppStoreVersionSubmissionForVersion)
 				if err != nil {
 					return fmt.Errorf("versions get: %w", err)
 				}

@@ -237,6 +237,27 @@ func (c *Client) GetAlternativeDistributionPackage(ctx context.Context, packageI
 	return &response, nil
 }
 
+// GetAlternativeDistributionPackageForVersion retrieves a package for an app store version.
+func (c *Client) GetAlternativeDistributionPackageForVersion(ctx context.Context, versionID string) (*AlternativeDistributionPackageResponse, error) {
+	versionID = strings.TrimSpace(versionID)
+	if versionID == "" {
+		return nil, fmt.Errorf("versionID is required")
+	}
+
+	path := fmt.Sprintf("/v1/appStoreVersions/%s/alternativeDistributionPackage", versionID)
+	data, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AlternativeDistributionPackageResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse alternative distribution package response: %w", err)
+	}
+
+	return &response, nil
+}
+
 // CreateAlternativeDistributionPackage creates an alternative distribution package.
 func (c *Client) CreateAlternativeDistributionPackage(ctx context.Context, appStoreVersionID string) (*AlternativeDistributionPackageResponse, error) {
 	appStoreVersionID = strings.TrimSpace(appStoreVersionID)

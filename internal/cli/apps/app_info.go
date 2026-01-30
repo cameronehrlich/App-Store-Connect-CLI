@@ -46,6 +46,7 @@ func AppInfoGetCommand() *ffcli.Command {
 	fs := flag.NewFlagSet("app-info get", flag.ExitOnError)
 
 	appID := fs.String("app", "", "App Store Connect app ID (or ASC_APP_ID env)")
+	appInfoID := fs.String("app-info", "", "App Info ID (optional override)")
 	versionID := fs.String("version-id", "", "App Store version ID (optional override)")
 	version := fs.String("version", "", "App Store version string (optional)")
 	platform := fs.String("platform", "", "Platform: IOS, MAC_OS, TV_OS, VISION_OS (required with --version)")
@@ -54,6 +55,7 @@ func AppInfoGetCommand() *ffcli.Command {
 	limit := fs.Int("limit", 0, "Maximum results per page (1-200)")
 	next := fs.String("next", "", "Fetch next page using a links.next URL")
 	paginate := fs.Bool("paginate", false, "Automatically fetch all pages (aggregate results)")
+	include := fs.String("include", "", "Include related resources: "+strings.Join(appInfoIncludeList(), ", "))
 	output := fs.String("output", "json", "Output format: json (default), table, markdown")
 	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
 
@@ -70,6 +72,8 @@ Examples:
   asc app-info get --app "APP_ID"
   asc app-info get --app "APP_ID" --version "1.2.3" --platform IOS
   asc app-info get --version-id "VERSION_ID"
+  asc app-info get --app-info "APP_INFO_ID" --include "ageRatingDeclaration"
+  asc app-info get --app "APP_ID" --include "ageRatingDeclaration,territoryAgeRatings"
   asc app-info get --app "APP_ID" --locale "en-US" --output table`,
 		FlagSet:   fs,
 		UsageFunc: DefaultUsageFunc,
@@ -85,8 +89,17 @@ Examples:
 			}
 
 			resolvedAppID := resolveAppID(*appID)
-			if strings.TrimSpace(*versionID) == "" && resolvedAppID == "" {
-				fmt.Fprintln(os.Stderr, "Error: --app is required (or set ASC_APP_ID)")
+			if strings.TrimSpace(*versionID) == "" && resolvedAppID == "" && strings.TrimSpace(*appInfoID) == "" {
+				fmt.Fprintln(os.Stderr, "Error: --app or --app-info is required (or set ASC_APP_ID)")
+				return flag.ErrHelp
+			}
+
+			includeValues, err := normalizeAppInfoInclude(*include)
+			if err != nil {
+				return fmt.Errorf("app-info get: %w", err)
+			}
+			if strings.TrimSpace(*appInfoID) != "" && len(includeValues) == 0 {
+				fmt.Fprintln(os.Stderr, "Error: --app-info requires --include")
 				return flag.ErrHelp
 			}
 
@@ -103,6 +116,20 @@ Examples:
 				return flag.ErrHelp
 			}
 
+			if len(includeValues) > 0 {
+				if strings.TrimSpace(*versionID) != "" ||
+					strings.TrimSpace(*version) != "" ||
+					strings.TrimSpace(*platform) != "" ||
+					strings.TrimSpace(*state) != "" ||
+					strings.TrimSpace(*locale) != "" ||
+					*limit != 0 ||
+					strings.TrimSpace(*next) != "" ||
+					*paginate {
+					fmt.Fprintln(os.Stderr, "Error: --include cannot be used with version localization flags")
+					return flag.ErrHelp
+				}
+			}
+
 			client, err := getASCClient()
 			if err != nil {
 				return fmt.Errorf("app-info get: %w", err)
@@ -110,6 +137,20 @@ Examples:
 
 			requestCtx, cancel := contextWithTimeout(ctx)
 			defer cancel()
+
+			if len(includeValues) > 0 {
+				appInfoIDValue, err := shared.ResolveAppInfoID(requestCtx, client, resolvedAppID, strings.TrimSpace(*appInfoID))
+				if err != nil {
+					return fmt.Errorf("app-info get: %w", err)
+				}
+
+				resp, err := client.GetAppInfo(requestCtx, appInfoIDValue, asc.WithAppInfoInclude(includeValues))
+				if err != nil {
+					return fmt.Errorf("app-info get: %w", err)
+				}
+
+				return printOutput(resp, *output, *pretty)
+			}
 
 			versionResource, err := resolveAppStoreVersionForAppInfo(
 				requestCtx,

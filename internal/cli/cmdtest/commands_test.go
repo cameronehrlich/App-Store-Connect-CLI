@@ -2734,7 +2734,7 @@ func TestAppInfoValidationErrors(t *testing.T) {
 		{
 			name:    "app-info get missing app",
 			args:    []string{"app-info", "get"},
-			wantErr: "--app is required",
+			wantErr: "--app or --app-info is required",
 		},
 		{
 			name:    "app-info get version missing platform",

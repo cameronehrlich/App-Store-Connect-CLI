@@ -178,6 +178,116 @@ func TestIntegrationEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("analytics_direct_gets", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		requests, err := client.GetAnalyticsReportRequests(ctx, appID, WithAnalyticsReportRequestsLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report requests: %v", err)
+		}
+		if requests == nil || len(requests.Data) == 0 {
+			t.Skip("no analytics report requests available")
+		}
+
+		requestID := strings.TrimSpace(requests.Data[0].ID)
+		if requestID == "" {
+			t.Skip("no analytics report request id available")
+		}
+
+		request, err := client.GetAnalyticsReportRequest(ctx, requestID)
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report request: %v", err)
+		}
+		if request == nil || request.Data.ID == "" {
+			t.Fatal("expected analytics report request data")
+		}
+
+		reports, err := client.GetAnalyticsReports(ctx, requestID, WithAnalyticsReportsLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch analytics reports: %v", err)
+		}
+		if reports == nil || len(reports.Data) == 0 {
+			t.Skip("no analytics reports available")
+		}
+
+		reportID := strings.TrimSpace(reports.Data[0].ID)
+		if reportID == "" {
+			t.Skip("no analytics report id available")
+		}
+
+		report, err := client.GetAnalyticsReport(ctx, reportID)
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report: %v", err)
+		}
+		if report == nil || report.Data.ID == "" {
+			t.Fatal("expected analytics report data")
+		}
+		assertASCLink(t, report.Links.Self)
+
+		instancesRel, err := client.GetAnalyticsReportInstancesRelationships(ctx, reportID, WithLinkagesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report instance relationships: %v", err)
+		}
+		if instancesRel != nil {
+			assertASCLink(t, instancesRel.Links.Self)
+			assertASCLink(t, instancesRel.Links.Next)
+		}
+
+		instances, err := client.GetAnalyticsReportInstances(ctx, reportID, WithAnalyticsReportInstancesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report instances: %v", err)
+		}
+		if instances == nil || len(instances.Data) == 0 {
+			t.Skip("no analytics report instances available")
+		}
+
+		instanceID := strings.TrimSpace(instances.Data[0].ID)
+		if instanceID == "" {
+			t.Skip("no analytics report instance id available")
+		}
+
+		instance, err := client.GetAnalyticsReportInstance(ctx, instanceID)
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report instance: %v", err)
+		}
+		if instance == nil || instance.Data.ID == "" {
+			t.Fatal("expected analytics report instance data")
+		}
+		assertASCLink(t, instance.Links.Self)
+
+		segmentsRel, err := client.GetAnalyticsReportInstanceSegmentsRelationships(ctx, instanceID, WithLinkagesLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report instance segment relationships: %v", err)
+		}
+		if segmentsRel != nil {
+			assertASCLink(t, segmentsRel.Links.Self)
+			assertASCLink(t, segmentsRel.Links.Next)
+		}
+
+		segments, err := client.GetAnalyticsReportSegments(ctx, instanceID, WithAnalyticsReportSegmentsLimit(1))
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report segments: %v", err)
+		}
+		if segments == nil || len(segments.Data) == 0 {
+			t.Skip("no analytics report segments available")
+		}
+
+		segmentID := strings.TrimSpace(segments.Data[0].ID)
+		if segmentID == "" {
+			t.Skip("no analytics report segment id available")
+		}
+
+		segment, err := client.GetAnalyticsReportSegment(ctx, segmentID)
+		if err != nil {
+			t.Fatalf("failed to fetch analytics report segment: %v", err)
+		}
+		if segment == nil || segment.Data.ID == "" {
+			t.Fatal("expected analytics report segment data")
+		}
+		assertASCLink(t, segment.Links.Self)
+	})
+
 	t.Run("feedback", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

@@ -22,6 +22,8 @@ Examples:
   asc analytics request --app "APP_ID" --access-type ONGOING
   asc analytics requests --app "APP_ID"
   asc analytics get --request-id "REQUEST_ID"
+  asc analytics reports get --report-id "REPORT_ID"
+  asc analytics instances relationships --instance-id "INSTANCE_ID"
   asc analytics download --request-id "REQUEST_ID" --instance-id "INSTANCE_ID"`,
 		FlagSet:   fs,
 		UsageFunc: DefaultUsageFunc,
@@ -30,6 +32,9 @@ Examples:
 			AnalyticsRequestCommand(),
 			AnalyticsRequestsCommand(),
 			AnalyticsGetCommand(),
+			AnalyticsReportsCommand(),
+			AnalyticsInstancesCommand(),
+			AnalyticsSegmentsCommand(),
 			AnalyticsDownloadCommand(),
 		},
 		Exec: func(ctx context.Context, args []string) error {

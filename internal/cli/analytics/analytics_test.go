@@ -211,6 +211,76 @@ func TestAnalyticsGetValidationErrors(t *testing.T) {
 	}
 }
 
+func TestAnalyticsReportsGetValidationErrors(t *testing.T) {
+	stdout, stderr, err := runAnalyticsCommand(t, []string{"analytics", "reports", "get"})
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected ErrHelp, got %v", err)
+	}
+
+	if stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "--report-id is required") {
+		t.Fatalf("expected missing report-id error, got %q", stderr)
+	}
+}
+
+func TestAnalyticsReportsRelationshipsValidationErrors(t *testing.T) {
+	stdout, stderr, err := runAnalyticsCommand(t, []string{"analytics", "reports", "relationships"})
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected ErrHelp, got %v", err)
+	}
+
+	if stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "--report-id is required") {
+		t.Fatalf("expected missing report-id error, got %q", stderr)
+	}
+}
+
+func TestAnalyticsInstancesGetValidationErrors(t *testing.T) {
+	stdout, stderr, err := runAnalyticsCommand(t, []string{"analytics", "instances", "get"})
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected ErrHelp, got %v", err)
+	}
+
+	if stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "--instance-id is required") {
+		t.Fatalf("expected missing instance-id error, got %q", stderr)
+	}
+}
+
+func TestAnalyticsInstancesRelationshipsValidationErrors(t *testing.T) {
+	stdout, stderr, err := runAnalyticsCommand(t, []string{"analytics", "instances", "relationships"})
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected ErrHelp, got %v", err)
+	}
+
+	if stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "--instance-id is required") {
+		t.Fatalf("expected missing instance-id error, got %q", stderr)
+	}
+}
+
+func TestAnalyticsSegmentsGetValidationErrors(t *testing.T) {
+	stdout, stderr, err := runAnalyticsCommand(t, []string{"analytics", "segments", "get"})
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected ErrHelp, got %v", err)
+	}
+
+	if stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", stdout)
+	}
+	if !strings.Contains(stderr, "--segment-id is required") {
+		t.Fatalf("expected missing segment-id error, got %q", stderr)
+	}
+}
+
 func TestAnalyticsDownloadValidationErrors(t *testing.T) {
 	tests := []struct {
 		name    string

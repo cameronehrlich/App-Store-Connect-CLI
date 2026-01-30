@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 // AppCategoryAttributes describes app category metadata.
@@ -24,6 +26,22 @@ type AppCategoriesResponse struct {
 	Links Links         `json:"links,omitempty"`
 }
 
+// GetLinks returns the links field for pagination.
+func (r *AppCategoriesResponse) GetLinks() *Links {
+	return &r.Links
+}
+
+// GetData returns the data field for aggregation.
+func (r *AppCategoriesResponse) GetData() interface{} {
+	return r.Data
+}
+
+// AppCategoryResponse is the response from app category detail endpoints.
+type AppCategoryResponse struct {
+	Data  AppCategory `json:"data"`
+	Links Links       `json:"links,omitempty"`
+}
+
 // GetAppCategories retrieves all app categories.
 func (c *Client) GetAppCategories(ctx context.Context, opts ...AppCategoriesOption) (*AppCategoriesResponse, error) {
 	query := &appCategoriesQuery{}
@@ -32,8 +50,13 @@ func (c *Client) GetAppCategories(ctx context.Context, opts ...AppCategoriesOpti
 	}
 
 	path := "/v1/appCategories"
-	if query.limit > 0 {
-		path += fmt.Sprintf("?limit=%d", query.limit)
+	if query.nextURL != "" {
+		if err := validateNextURL(query.nextURL); err != nil {
+			return nil, fmt.Errorf("appCategories: %w", err)
+		}
+		path = query.nextURL
+	} else if queryString := buildAppCategoriesQuery(query); queryString != "" {
+		path += "?" + queryString
 	}
 
 	data, err := c.do(ctx, "GET", path, nil)
@@ -51,7 +74,7 @@ func (c *Client) GetAppCategories(ctx context.Context, opts ...AppCategoriesOpti
 
 // appCategoriesQuery holds query parameters for app categories.
 type appCategoriesQuery struct {
-	limit int
+	listQuery
 }
 
 // AppCategoriesOption configures app categories queries.
@@ -62,6 +85,98 @@ func WithAppCategoriesLimit(limit int) AppCategoriesOption {
 	return func(q *appCategoriesQuery) {
 		q.limit = limit
 	}
+}
+
+// WithAppCategoriesNextURL uses a next page URL directly.
+func WithAppCategoriesNextURL(next string) AppCategoriesOption {
+	return func(q *appCategoriesQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+func buildAppCategoriesQuery(query *appCategoriesQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
+// GetAppCategory retrieves a single app category by ID.
+func (c *Client) GetAppCategory(ctx context.Context, categoryID string) (*AppCategoryResponse, error) {
+	categoryID = strings.TrimSpace(categoryID)
+	if categoryID == "" {
+		return nil, fmt.Errorf("categoryID is required")
+	}
+
+	path := fmt.Sprintf("/v1/appCategories/%s", categoryID)
+	data, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppCategoryResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// GetAppCategoryParent retrieves the parent category for a category.
+func (c *Client) GetAppCategoryParent(ctx context.Context, categoryID string) (*AppCategoryResponse, error) {
+	categoryID = strings.TrimSpace(categoryID)
+	if categoryID == "" {
+		return nil, fmt.Errorf("categoryID is required")
+	}
+
+	path := fmt.Sprintf("/v1/appCategories/%s/parent", categoryID)
+	data, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppCategoryResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// GetAppCategorySubcategories retrieves subcategories for a category.
+func (c *Client) GetAppCategorySubcategories(ctx context.Context, categoryID string, opts ...AppCategoriesOption) (*AppCategoriesResponse, error) {
+	query := &appCategoriesQuery{}
+	for _, opt := range opts {
+		opt(query)
+	}
+
+	categoryID = strings.TrimSpace(categoryID)
+	if query.nextURL == "" && categoryID == "" {
+		return nil, fmt.Errorf("categoryID is required")
+	}
+
+	path := fmt.Sprintf("/v1/appCategories/%s/subcategories", categoryID)
+	if query.nextURL != "" {
+		if err := validateNextURL(query.nextURL); err != nil {
+			return nil, fmt.Errorf("appCategorySubcategories: %w", err)
+		}
+		path = query.nextURL
+	} else if queryString := buildAppCategoriesQuery(query); queryString != "" {
+		path += "?" + queryString
+	}
+
+	data, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppCategoriesResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
 }
 
 // AppInfoUpdateCategoriesRelationships describes relationships for updating categories.
@@ -84,15 +199,6 @@ type AppInfoUpdateCategoriesData struct {
 // AppInfoUpdateCategoriesRequest is a request to update app info categories.
 type AppInfoUpdateCategoriesRequest struct {
 	Data AppInfoUpdateCategoriesData `json:"data"`
-}
-
-// AppInfoResponse is the response from updating app info.
-type AppInfoResponse struct {
-	Data struct {
-		Type       ResourceType      `json:"type"`
-		ID         string            `json:"id"`
-		Attributes AppInfoAttributes `json:"attributes,omitempty"`
-	} `json:"data"`
 }
 
 // UpdateAppInfoCategories updates the categories for an app info resource.

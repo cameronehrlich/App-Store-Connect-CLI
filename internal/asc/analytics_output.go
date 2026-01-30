@@ -250,6 +250,98 @@ func printAnalyticsReportGetResultMarkdown(result *AnalyticsReportGetResult) err
 	return nil
 }
 
+func printAnalyticsReportsTable(resp *AnalyticsReportsResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tName\tReport Type\tCategory\tSubcategory\tGranularity")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			item.ID,
+			item.Attributes.Name,
+			item.Attributes.ReportType,
+			item.Attributes.Category,
+			item.Attributes.SubCategory,
+			item.Attributes.Granularity,
+		)
+	}
+	return w.Flush()
+}
+
+func printAnalyticsReportsMarkdown(resp *AnalyticsReportsResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Name | Report Type | Category | Subcategory | Granularity |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %s | %s | %s | %s | %s |\n",
+			escapeMarkdown(item.ID),
+			escapeMarkdown(item.Attributes.Name),
+			escapeMarkdown(item.Attributes.ReportType),
+			escapeMarkdown(item.Attributes.Category),
+			escapeMarkdown(item.Attributes.SubCategory),
+			escapeMarkdown(item.Attributes.Granularity),
+		)
+	}
+	return nil
+}
+
+func printAnalyticsReportInstancesTable(resp *AnalyticsReportInstancesResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tReport Date\tProcessing Date\tGranularity\tVersion")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			item.ID,
+			item.Attributes.ReportDate,
+			item.Attributes.ProcessingDate,
+			item.Attributes.Granularity,
+			item.Attributes.Version,
+		)
+	}
+	return w.Flush()
+}
+
+func printAnalyticsReportInstancesMarkdown(resp *AnalyticsReportInstancesResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Report Date | Processing Date | Granularity | Version |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %s | %s | %s | %s |\n",
+			escapeMarkdown(item.ID),
+			escapeMarkdown(item.Attributes.ReportDate),
+			escapeMarkdown(item.Attributes.ProcessingDate),
+			escapeMarkdown(item.Attributes.Granularity),
+			escapeMarkdown(item.Attributes.Version),
+		)
+	}
+	return nil
+}
+
+func printAnalyticsReportSegmentsTable(resp *AnalyticsReportSegmentsResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tDownload URL\tChecksum\tSize (bytes)\tURL Expires")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
+			item.ID,
+			item.Attributes.URL,
+			item.Attributes.Checksum,
+			item.Attributes.SizeInBytes,
+			item.Attributes.URLExpirationDate,
+		)
+	}
+	return w.Flush()
+}
+
+func printAnalyticsReportSegmentsMarkdown(resp *AnalyticsReportSegmentsResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Download URL | Checksum | Size (bytes) | URL Expires |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %s | %s | %d | %s |\n",
+			escapeMarkdown(item.ID),
+			escapeMarkdown(item.Attributes.URL),
+			escapeMarkdown(item.Attributes.Checksum),
+			item.Attributes.SizeInBytes,
+			escapeMarkdown(item.Attributes.URLExpirationDate),
+		)
+	}
+	return nil
+}
+
 func countSegments(instances []AnalyticsReportGetInstance) int {
 	total := 0
 	for _, instance := range instances {

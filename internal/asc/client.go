@@ -79,6 +79,9 @@ type AppInfoLocalizationResponse = SingleResponse[AppInfoLocalizationAttributes]
 // AppInfosResponse is the response from app info endpoints.
 type AppInfosResponse = Response[AppInfoAttributes]
 
+// AppInfoResponse is the response from app info detail endpoints.
+type AppInfoResponse = SingleResponse[AppInfoAttributes]
+
 // BetaGroupsResponse is the response from beta groups endpoints.
 type BetaGroupsResponse = Response[BetaGroupAttributes]
 
@@ -122,7 +125,7 @@ type AppInfoLocalizationAttributes struct {
 }
 
 // AppInfoAttributes describes app info resources.
-type AppInfoAttributes struct{}
+type AppInfoAttributes map[string]any
 
 // BetaGroupAttributes describes a beta group resource.
 type BetaGroupAttributes struct {
@@ -1191,6 +1194,35 @@ func (c *Client) GetAppInfos(ctx context.Context, appID string) (*AppInfosRespon
 	}
 
 	var response AppInfosResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// GetAppInfo retrieves an app info record by ID.
+func (c *Client) GetAppInfo(ctx context.Context, appInfoID string, opts ...AppInfoOption) (*AppInfoResponse, error) {
+	query := &appInfoQuery{}
+	for _, opt := range opts {
+		opt(query)
+	}
+
+	appInfoID = strings.TrimSpace(appInfoID)
+	if appInfoID == "" {
+		return nil, fmt.Errorf("appInfoID is required")
+	}
+
+	path := fmt.Sprintf("/v1/appInfos/%s", appInfoID)
+	if queryString := buildAppInfoQuery(query); queryString != "" {
+		path += "?" + queryString
+	}
+	data, err := c.do(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response AppInfoResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
