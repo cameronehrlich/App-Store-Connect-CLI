@@ -601,18 +601,30 @@ func PrintMarkdown(data interface{}) error {
 		return printGameCenterAchievementsMarkdown(&GameCenterAchievementsResponse{Data: []Resource[GameCenterAchievementAttributes]{v.Data}})
 	case *GameCenterAchievementDeleteResult:
 		return printGameCenterAchievementDeleteResultMarkdown(v)
+	case *GameCenterAchievementVersionsResponse:
+		return printGameCenterAchievementVersionsMarkdown(v)
+	case *GameCenterAchievementVersionResponse:
+		return printGameCenterAchievementVersionsMarkdown(&GameCenterAchievementVersionsResponse{Data: []Resource[GameCenterAchievementVersionAttributes]{v.Data}})
 	case *GameCenterLeaderboardsResponse:
 		return printGameCenterLeaderboardsMarkdown(v)
 	case *GameCenterLeaderboardResponse:
 		return printGameCenterLeaderboardsMarkdown(&GameCenterLeaderboardsResponse{Data: []Resource[GameCenterLeaderboardAttributes]{v.Data}})
 	case *GameCenterLeaderboardDeleteResult:
 		return printGameCenterLeaderboardDeleteResultMarkdown(v)
+	case *GameCenterLeaderboardVersionsResponse:
+		return printGameCenterLeaderboardVersionsMarkdown(v)
+	case *GameCenterLeaderboardVersionResponse:
+		return printGameCenterLeaderboardVersionsMarkdown(&GameCenterLeaderboardVersionsResponse{Data: []Resource[GameCenterLeaderboardVersionAttributes]{v.Data}})
 	case *GameCenterLeaderboardSetsResponse:
 		return printGameCenterLeaderboardSetsMarkdown(v)
 	case *GameCenterLeaderboardSetResponse:
 		return printGameCenterLeaderboardSetsMarkdown(&GameCenterLeaderboardSetsResponse{Data: []Resource[GameCenterLeaderboardSetAttributes]{v.Data}})
 	case *GameCenterLeaderboardSetDeleteResult:
 		return printGameCenterLeaderboardSetDeleteResultMarkdown(v)
+	case *GameCenterLeaderboardSetVersionsResponse:
+		return printGameCenterLeaderboardSetVersionsMarkdown(v)
+	case *GameCenterLeaderboardSetVersionResponse:
+		return printGameCenterLeaderboardSetVersionsMarkdown(&GameCenterLeaderboardSetVersionsResponse{Data: []Resource[GameCenterLeaderboardSetVersionAttributes]{v.Data}})
 	case *GameCenterLeaderboardLocalizationsResponse:
 		return printGameCenterLeaderboardLocalizationsMarkdown(v)
 	case *GameCenterLeaderboardLocalizationResponse:
@@ -1511,18 +1523,30 @@ func PrintTable(data interface{}) error {
 		return printGameCenterAchievementsTable(&GameCenterAchievementsResponse{Data: []Resource[GameCenterAchievementAttributes]{v.Data}})
 	case *GameCenterAchievementDeleteResult:
 		return printGameCenterAchievementDeleteResultTable(v)
+	case *GameCenterAchievementVersionsResponse:
+		return printGameCenterAchievementVersionsTable(v)
+	case *GameCenterAchievementVersionResponse:
+		return printGameCenterAchievementVersionsTable(&GameCenterAchievementVersionsResponse{Data: []Resource[GameCenterAchievementVersionAttributes]{v.Data}})
 	case *GameCenterLeaderboardsResponse:
 		return printGameCenterLeaderboardsTable(v)
 	case *GameCenterLeaderboardResponse:
 		return printGameCenterLeaderboardsTable(&GameCenterLeaderboardsResponse{Data: []Resource[GameCenterLeaderboardAttributes]{v.Data}})
 	case *GameCenterLeaderboardDeleteResult:
 		return printGameCenterLeaderboardDeleteResultTable(v)
+	case *GameCenterLeaderboardVersionsResponse:
+		return printGameCenterLeaderboardVersionsTable(v)
+	case *GameCenterLeaderboardVersionResponse:
+		return printGameCenterLeaderboardVersionsTable(&GameCenterLeaderboardVersionsResponse{Data: []Resource[GameCenterLeaderboardVersionAttributes]{v.Data}})
 	case *GameCenterLeaderboardSetsResponse:
 		return printGameCenterLeaderboardSetsTable(v)
 	case *GameCenterLeaderboardSetResponse:
 		return printGameCenterLeaderboardSetsTable(&GameCenterLeaderboardSetsResponse{Data: []Resource[GameCenterLeaderboardSetAttributes]{v.Data}})
 	case *GameCenterLeaderboardSetDeleteResult:
 		return printGameCenterLeaderboardSetDeleteResultTable(v)
+	case *GameCenterLeaderboardSetVersionsResponse:
+		return printGameCenterLeaderboardSetVersionsTable(v)
+	case *GameCenterLeaderboardSetVersionResponse:
+		return printGameCenterLeaderboardSetVersionsTable(&GameCenterLeaderboardSetVersionsResponse{Data: []Resource[GameCenterLeaderboardSetVersionAttributes]{v.Data}})
 	case *GameCenterLeaderboardLocalizationsResponse:
 		return printGameCenterLeaderboardLocalizationsTable(v)
 	case *GameCenterLeaderboardLocalizationResponse:

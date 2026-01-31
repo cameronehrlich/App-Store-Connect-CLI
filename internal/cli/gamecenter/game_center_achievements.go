@@ -44,6 +44,7 @@ Examples:
 			GameCenterAchievementsUpdateCommand(),
 			GameCenterAchievementsDeleteCommand(),
 			GameCenterAchievementsSubmitCommand(),
+			GameCenterAchievementsV2Command(),
 			GameCenterAchievementLocalizationsCommand(),
 			GameCenterAchievementImagesCommand(),
 			GameCenterAchievementReleasesCommand(),

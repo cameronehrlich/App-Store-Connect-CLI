@@ -616,6 +616,84 @@ func printGameCenterChallengeDeleteResultMarkdown(result *GameCenterChallengeDel
 	return nil
 }
 
+func printGameCenterAchievementVersionsTable(resp *GameCenterAchievementVersionsResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tVersion\tState")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%d\t%s\n",
+			item.ID,
+			item.Attributes.Version,
+			item.Attributes.State,
+		)
+	}
+	return w.Flush()
+}
+
+func printGameCenterAchievementVersionsMarkdown(resp *GameCenterAchievementVersionsResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Version | State |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %d | %s |\n",
+			escapeMarkdown(item.ID),
+			item.Attributes.Version,
+			escapeMarkdown(string(item.Attributes.State)),
+		)
+	}
+	return nil
+}
+
+func printGameCenterLeaderboardVersionsTable(resp *GameCenterLeaderboardVersionsResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tVersion\tState")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%d\t%s\n",
+			item.ID,
+			item.Attributes.Version,
+			item.Attributes.State,
+		)
+	}
+	return w.Flush()
+}
+
+func printGameCenterLeaderboardVersionsMarkdown(resp *GameCenterLeaderboardVersionsResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Version | State |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %d | %s |\n",
+			escapeMarkdown(item.ID),
+			item.Attributes.Version,
+			escapeMarkdown(string(item.Attributes.State)),
+		)
+	}
+	return nil
+}
+
+func printGameCenterLeaderboardSetVersionsTable(resp *GameCenterLeaderboardSetVersionsResponse) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tVersion\tState")
+	for _, item := range resp.Data {
+		fmt.Fprintf(w, "%s\t%d\t%s\n",
+			item.ID,
+			item.Attributes.Version,
+			item.Attributes.State,
+		)
+	}
+	return w.Flush()
+}
+
+func printGameCenterLeaderboardSetVersionsMarkdown(resp *GameCenterLeaderboardSetVersionsResponse) error {
+	fmt.Fprintln(os.Stdout, "| ID | Version | State |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- |")
+	for _, item := range resp.Data {
+		fmt.Fprintf(os.Stdout, "| %s | %d | %s |\n",
+			escapeMarkdown(item.ID),
+			item.Attributes.Version,
+			escapeMarkdown(string(item.Attributes.State)),
+		)
+	}
+	return nil
+}
+
 func printGameCenterChallengeVersionsTable(resp *GameCenterChallengeVersionsResponse) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tVersion\tState")

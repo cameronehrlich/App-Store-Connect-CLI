@@ -27,6 +27,12 @@ type GameCenterLeaderboardSetRelationships struct {
 	GameCenterDetail *Relationship `json:"gameCenterDetail"`
 }
 
+// GameCenterLeaderboardSetV2Relationships describes relationships for v2 leaderboard sets.
+type GameCenterLeaderboardSetV2Relationships struct {
+	GameCenterDetail *Relationship `json:"gameCenterDetail,omitempty"`
+	GameCenterGroup  *Relationship `json:"gameCenterGroup,omitempty"`
+}
+
 // GameCenterLeaderboardSetCreateData is the data portion of a leaderboard set create request.
 type GameCenterLeaderboardSetCreateData struct {
 	Type          ResourceType                             `json:"type"`
@@ -37,6 +43,18 @@ type GameCenterLeaderboardSetCreateData struct {
 // GameCenterLeaderboardSetCreateRequest is a request to create a leaderboard set.
 type GameCenterLeaderboardSetCreateRequest struct {
 	Data GameCenterLeaderboardSetCreateData `json:"data"`
+}
+
+// GameCenterLeaderboardSetV2CreateData is the data portion of a v2 leaderboard set create request.
+type GameCenterLeaderboardSetV2CreateData struct {
+	Type          ResourceType                             `json:"type"`
+	Attributes    GameCenterLeaderboardSetCreateAttributes `json:"attributes"`
+	Relationships *GameCenterLeaderboardSetV2Relationships `json:"relationships,omitempty"`
+}
+
+// GameCenterLeaderboardSetV2CreateRequest is a request to create a v2 leaderboard set.
+type GameCenterLeaderboardSetV2CreateRequest struct {
+	Data GameCenterLeaderboardSetV2CreateData `json:"data"`
 }
 
 // GameCenterLeaderboardSetUpdateData is the data portion of a leaderboard set update request.
@@ -94,6 +112,65 @@ func buildGCLeaderboardSetsQuery(query *gcLeaderboardSetsQuery) string {
 	return values.Encode()
 }
 
+// GameCenterLeaderboardSetVersionAttributes represents a v2 leaderboard set version resource.
+type GameCenterLeaderboardSetVersionAttributes struct {
+	Version int                    `json:"version,omitempty"`
+	State   GameCenterVersionState `json:"state,omitempty"`
+}
+
+// GameCenterLeaderboardSetVersionRelationships describes relationships for leaderboard set versions.
+type GameCenterLeaderboardSetVersionRelationships struct {
+	LeaderboardSet *Relationship `json:"leaderboardSet,omitempty"`
+}
+
+// GameCenterLeaderboardSetVersionCreateData is the data portion of a version create request.
+type GameCenterLeaderboardSetVersionCreateData struct {
+	Type          ResourceType                                  `json:"type"`
+	Relationships *GameCenterLeaderboardSetVersionRelationships `json:"relationships,omitempty"`
+}
+
+// GameCenterLeaderboardSetVersionCreateRequest is a request to create a leaderboard set version.
+type GameCenterLeaderboardSetVersionCreateRequest struct {
+	Data GameCenterLeaderboardSetVersionCreateData `json:"data"`
+}
+
+// GameCenterLeaderboardSetVersionsResponse is the response from leaderboard set version list endpoints.
+type GameCenterLeaderboardSetVersionsResponse = Response[GameCenterLeaderboardSetVersionAttributes]
+
+// GameCenterLeaderboardSetVersionResponse is the response from leaderboard set version detail endpoints.
+type GameCenterLeaderboardSetVersionResponse = SingleResponse[GameCenterLeaderboardSetVersionAttributes]
+
+// GCLeaderboardSetVersionsOption is a functional option for GetGameCenterLeaderboardSetVersions.
+type GCLeaderboardSetVersionsOption func(*gcLeaderboardSetVersionsQuery)
+
+type gcLeaderboardSetVersionsQuery struct {
+	listQuery
+}
+
+// WithGCLeaderboardSetVersionsLimit sets the max number of versions to return.
+func WithGCLeaderboardSetVersionsLimit(limit int) GCLeaderboardSetVersionsOption {
+	return func(q *gcLeaderboardSetVersionsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithGCLeaderboardSetVersionsNextURL uses a next page URL directly.
+func WithGCLeaderboardSetVersionsNextURL(next string) GCLeaderboardSetVersionsOption {
+	return func(q *gcLeaderboardSetVersionsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+func buildGCLeaderboardSetVersionsQuery(query *gcLeaderboardSetVersionsQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
 // GameCenterLeaderboardSetLocalizationAttributes represents a Game Center leaderboard set localization resource.
 type GameCenterLeaderboardSetLocalizationAttributes struct {
 	Locale string `json:"locale"`
@@ -126,6 +203,23 @@ type GameCenterLeaderboardSetLocalizationCreateData struct {
 // GameCenterLeaderboardSetLocalizationCreateRequest is a request to create a leaderboard set localization.
 type GameCenterLeaderboardSetLocalizationCreateRequest struct {
 	Data GameCenterLeaderboardSetLocalizationCreateData `json:"data"`
+}
+
+// GameCenterLeaderboardSetLocalizationV2Relationships describes relationships for v2 leaderboard set localizations.
+type GameCenterLeaderboardSetLocalizationV2Relationships struct {
+	Version *Relationship `json:"version"`
+}
+
+// GameCenterLeaderboardSetLocalizationV2CreateData is the data portion of a v2 localization create request.
+type GameCenterLeaderboardSetLocalizationV2CreateData struct {
+	Type          ResourceType                                         `json:"type"`
+	Attributes    GameCenterLeaderboardSetLocalizationCreateAttributes `json:"attributes"`
+	Relationships *GameCenterLeaderboardSetLocalizationV2Relationships `json:"relationships,omitempty"`
+}
+
+// GameCenterLeaderboardSetLocalizationV2CreateRequest is a request to create a v2 localization.
+type GameCenterLeaderboardSetLocalizationV2CreateRequest struct {
+	Data GameCenterLeaderboardSetLocalizationV2CreateData `json:"data"`
 }
 
 // GameCenterLeaderboardSetLocalizationUpdateData is the data portion of a leaderboard set localization update request.
@@ -327,6 +421,23 @@ type GameCenterLeaderboardSetImageCreateData struct {
 // GameCenterLeaderboardSetImageCreateRequest is a request to reserve an image upload.
 type GameCenterLeaderboardSetImageCreateRequest struct {
 	Data GameCenterLeaderboardSetImageCreateData `json:"data"`
+}
+
+// GameCenterLeaderboardSetImageV2Relationships describes relationships for v2 leaderboard set images.
+type GameCenterLeaderboardSetImageV2Relationships struct {
+	Localization *Relationship `json:"localization"`
+}
+
+// GameCenterLeaderboardSetImageV2CreateData is the data portion of a v2 image create (reserve) request.
+type GameCenterLeaderboardSetImageV2CreateData struct {
+	Type          ResourceType                                  `json:"type"`
+	Attributes    GameCenterLeaderboardSetImageCreateAttributes `json:"attributes"`
+	Relationships *GameCenterLeaderboardSetImageV2Relationships `json:"relationships"`
+}
+
+// GameCenterLeaderboardSetImageV2CreateRequest is a request to reserve a v2 image upload.
+type GameCenterLeaderboardSetImageV2CreateRequest struct {
+	Data GameCenterLeaderboardSetImageV2CreateData `json:"data"`
 }
 
 // GameCenterLeaderboardSetImageUpdateData is the data portion of an image update (commit) request.

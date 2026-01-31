@@ -268,10 +268,16 @@ func PaginateAll(ctx context.Context, firstPage PaginatedResponse, fetchNext Pag
 		result = &CiXcodeVersionsResponse{Links: Links{}}
 	case *GameCenterAchievementsResponse:
 		result = &GameCenterAchievementsResponse{Links: Links{}}
+	case *GameCenterAchievementVersionsResponse:
+		result = &GameCenterAchievementVersionsResponse{Links: Links{}}
 	case *GameCenterLeaderboardsResponse:
 		result = &GameCenterLeaderboardsResponse{Links: Links{}}
+	case *GameCenterLeaderboardVersionsResponse:
+		result = &GameCenterLeaderboardVersionsResponse{Links: Links{}}
 	case *GameCenterLeaderboardSetsResponse:
 		result = &GameCenterLeaderboardSetsResponse{Links: Links{}}
+	case *GameCenterLeaderboardSetVersionsResponse:
+		result = &GameCenterLeaderboardSetVersionsResponse{Links: Links{}}
 	case *GameCenterAchievementLocalizationsResponse:
 		result = &GameCenterAchievementLocalizationsResponse{Links: Links{}}
 	case *GameCenterLeaderboardLocalizationsResponse:

@@ -45,6 +45,7 @@ Examples:
 			GameCenterLeaderboardSetsCreateCommand(),
 			GameCenterLeaderboardSetsUpdateCommand(),
 			GameCenterLeaderboardSetsDeleteCommand(),
+			GameCenterLeaderboardSetsV2Command(),
 			GameCenterLeaderboardSetMembersCommand(),
 			GameCenterLeaderboardSetReleasesCommand(),
 			GameCenterLeaderboardSetImagesCommand(),

@@ -43,6 +43,7 @@ Examples:
 			GameCenterLeaderboardsUpdateCommand(),
 			GameCenterLeaderboardsDeleteCommand(),
 			GameCenterLeaderboardsSubmitCommand(),
+			GameCenterLeaderboardsV2Command(),
 			GameCenterLeaderboardLocalizationsCommand(),
 			GameCenterLeaderboardReleasesCommand(),
 			GameCenterLeaderboardImagesCommand(),

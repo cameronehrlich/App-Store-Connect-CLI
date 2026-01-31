@@ -126,6 +126,65 @@ func buildGCAchievementsQuery(query *gcAchievementsQuery) string {
 	return values.Encode()
 }
 
+// GameCenterAchievementVersionAttributes represents a v2 achievement version resource.
+type GameCenterAchievementVersionAttributes struct {
+	Version int                    `json:"version,omitempty"`
+	State   GameCenterVersionState `json:"state,omitempty"`
+}
+
+// GameCenterAchievementVersionRelationships describes relationships for achievement versions.
+type GameCenterAchievementVersionRelationships struct {
+	Achievement *Relationship `json:"achievement,omitempty"`
+}
+
+// GameCenterAchievementVersionCreateData is the data portion of a version create request.
+type GameCenterAchievementVersionCreateData struct {
+	Type          ResourceType                               `json:"type"`
+	Relationships *GameCenterAchievementVersionRelationships `json:"relationships,omitempty"`
+}
+
+// GameCenterAchievementVersionCreateRequest is a request to create an achievement version.
+type GameCenterAchievementVersionCreateRequest struct {
+	Data GameCenterAchievementVersionCreateData `json:"data"`
+}
+
+// GameCenterAchievementVersionsResponse is the response from achievement version list endpoints.
+type GameCenterAchievementVersionsResponse = Response[GameCenterAchievementVersionAttributes]
+
+// GameCenterAchievementVersionResponse is the response from achievement version detail endpoints.
+type GameCenterAchievementVersionResponse = SingleResponse[GameCenterAchievementVersionAttributes]
+
+// GCAchievementVersionsOption is a functional option for GetGameCenterAchievementVersions.
+type GCAchievementVersionsOption func(*gcAchievementVersionsQuery)
+
+type gcAchievementVersionsQuery struct {
+	listQuery
+}
+
+// WithGCAchievementVersionsLimit sets the max number of versions to return.
+func WithGCAchievementVersionsLimit(limit int) GCAchievementVersionsOption {
+	return func(q *gcAchievementVersionsQuery) {
+		if limit > 0 {
+			q.limit = limit
+		}
+	}
+}
+
+// WithGCAchievementVersionsNextURL uses a next page URL directly.
+func WithGCAchievementVersionsNextURL(next string) GCAchievementVersionsOption {
+	return func(q *gcAchievementVersionsQuery) {
+		if strings.TrimSpace(next) != "" {
+			q.nextURL = strings.TrimSpace(next)
+		}
+	}
+}
+
+func buildGCAchievementVersionsQuery(query *gcAchievementVersionsQuery) string {
+	values := url.Values{}
+	addLimit(values, query.limit)
+	return values.Encode()
+}
+
 // GameCenterAchievementLocalizationAttributes represents a Game Center achievement localization.
 type GameCenterAchievementLocalizationAttributes struct {
 	Locale                  string `json:"locale"`
@@ -164,6 +223,23 @@ type GameCenterAchievementLocalizationCreateData struct {
 // GameCenterAchievementLocalizationCreateRequest is a request to create a localization.
 type GameCenterAchievementLocalizationCreateRequest struct {
 	Data GameCenterAchievementLocalizationCreateData `json:"data"`
+}
+
+// GameCenterAchievementLocalizationV2Relationships describes relationships for v2 achievement localizations.
+type GameCenterAchievementLocalizationV2Relationships struct {
+	Version *Relationship `json:"version"`
+}
+
+// GameCenterAchievementLocalizationV2CreateData is the data portion of a v2 localization create request.
+type GameCenterAchievementLocalizationV2CreateData struct {
+	Type          ResourceType                                      `json:"type"`
+	Attributes    GameCenterAchievementLocalizationCreateAttributes `json:"attributes"`
+	Relationships *GameCenterAchievementLocalizationV2Relationships `json:"relationships,omitempty"`
+}
+
+// GameCenterAchievementLocalizationV2CreateRequest is a request to create a v2 localization.
+type GameCenterAchievementLocalizationV2CreateRequest struct {
+	Data GameCenterAchievementLocalizationV2CreateData `json:"data"`
 }
 
 // GameCenterAchievementLocalizationUpdateData is the data portion of a localization update request.
@@ -321,6 +397,23 @@ type GameCenterAchievementImageCreateData struct {
 // GameCenterAchievementImageCreateRequest is a request to reserve an image upload.
 type GameCenterAchievementImageCreateRequest struct {
 	Data GameCenterAchievementImageCreateData `json:"data"`
+}
+
+// GameCenterAchievementImageV2Relationships describes relationships for v2 achievement images.
+type GameCenterAchievementImageV2Relationships struct {
+	Localization *Relationship `json:"localization"`
+}
+
+// GameCenterAchievementImageV2CreateData is the data portion of a v2 image create (reserve) request.
+type GameCenterAchievementImageV2CreateData struct {
+	Type          ResourceType                               `json:"type"`
+	Attributes    GameCenterAchievementImageCreateAttributes `json:"attributes"`
+	Relationships *GameCenterAchievementImageV2Relationships `json:"relationships"`
+}
+
+// GameCenterAchievementImageV2CreateRequest is a request to reserve a v2 image upload.
+type GameCenterAchievementImageV2CreateRequest struct {
+	Data GameCenterAchievementImageV2CreateData `json:"data"`
 }
 
 // GameCenterAchievementImageUpdateData is the data portion of an image update (commit) request.
