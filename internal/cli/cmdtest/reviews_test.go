@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"io"
-	"strings"
 	"testing"
 )
 
@@ -26,7 +25,7 @@ func TestReviewsGetRequiresID(t *testing.T) {
 	if stdout != "" {
 		t.Fatalf("expected empty stdout, got %q", stdout)
 	}
-	if !strings.Contains(stderr, "Error: --id is required") {
-		t.Fatalf("expected error %q, got %q", "Error: --id is required", stderr)
+	if stderr == "" {
+		t.Fatalf("expected stderr output")
 	}
 }

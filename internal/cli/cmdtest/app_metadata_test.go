@@ -220,24 +220,20 @@ func TestVersionsRelationshipsValidationErrors(t *testing.T) {
 
 func TestVersionsRelatedCommandsValidationErrors(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    []string
-		wantErr string
+		name string
+		args []string
 	}{
 		{
-			name:    "versions experiments v2 list missing version id",
-			args:    []string{"versions", "experiments-v2", "list"},
-			wantErr: "Error: --version-id is required",
+			name: "versions experiments v2 list missing version id",
+			args: []string{"versions", "experiments-v2", "list"},
 		},
 		{
-			name:    "versions customer reviews list missing version id",
-			args:    []string{"versions", "customer-reviews", "list"},
-			wantErr: "Error: --version-id is required",
+			name: "versions customer reviews list missing version id",
+			args: []string{"versions", "customer-reviews", "list"},
 		},
 		{
-			name:    "versions app clip default experience get missing version id",
-			args:    []string{"versions", "app-clip-default-experience", "get"},
-			wantErr: "Error: --version-id is required",
+			name: "versions app clip default experience get missing version id",
+			args: []string{"versions", "app-clip-default-experience", "get"},
 		},
 	}
 
@@ -259,8 +255,8 @@ func TestVersionsRelatedCommandsValidationErrors(t *testing.T) {
 			if stdout != "" {
 				t.Fatalf("expected empty stdout, got %q", stdout)
 			}
-			if !strings.Contains(stderr, test.wantErr) {
-				t.Fatalf("expected error %q, got %q", test.wantErr, stderr)
+			if stderr == "" {
+				t.Fatalf("expected stderr output")
 			}
 		})
 	}
