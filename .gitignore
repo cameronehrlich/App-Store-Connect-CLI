@@ -38,3 +38,4 @@ go.work.sum
 # BMAD (Build, Manage, Automate, Deploy) workflow system
 _bmad/
 _bmad-output/
+worktrees/
