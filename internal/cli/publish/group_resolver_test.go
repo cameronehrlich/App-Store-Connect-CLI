@@ -253,6 +253,27 @@ func TestResolvePublishBetaGroupIDsFromList_DeduplicatesNameAndID(t *testing.T) 
 	}
 }
 
+func TestResolvePublishBetaGroupIDsFromList_DuplicateAPIEntries(t *testing.T) {
+	// Simulate the same group appearing multiple times in the API response
+	// (can happen with pagination when data changes between page fetches).
+	groups := &asc.BetaGroupsResponse{
+		Data: []asc.Resource[asc.BetaGroupAttributes]{
+			{ID: "G1", Attributes: asc.BetaGroupAttributes{Name: "Alpha"}},
+			{ID: "G1", Attributes: asc.BetaGroupAttributes{Name: "Alpha"}}, // duplicate
+			{ID: "G2", Attributes: asc.BetaGroupAttributes{Name: "Beta"}},
+		},
+	}
+
+	// Should resolve "alpha" to G1 without reporting a false ambiguous error.
+	got, err := resolvePublishBetaGroupIDsFromList([]string{"alpha"}, groups)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0] != "G1" {
+		t.Fatalf("expected [G1], got %v", got)
+	}
+}
+
 // --- resolvePublishBetaGroupIDs (HTTP integration tests) -------------------
 
 func TestResolvePublishBetaGroupIDs_SinglePage(t *testing.T) {

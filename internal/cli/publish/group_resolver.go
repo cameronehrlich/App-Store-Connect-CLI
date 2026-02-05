@@ -3,6 +3,7 @@ package publish
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
@@ -62,7 +63,9 @@ func resolvePublishBetaGroupIDsFromList(inputGroups []string, groups *asc.BetaGr
 			continue
 		}
 		key := strings.ToLower(name)
-		groupNameToIDs[key] = append(groupNameToIDs[key], id)
+		if !slices.Contains(groupNameToIDs[key], id) {
+			groupNameToIDs[key] = append(groupNameToIDs[key], id)
+		}
 	}
 
 	resolved := make([]string, 0, len(inputGroups))
