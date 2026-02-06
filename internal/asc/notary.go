@@ -1,16 +1,19 @@
 package asc
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,6 +29,12 @@ const (
 	notaryS3Region = "us-west-2"
 	// notaryS3MaxSingleUploadBytes is the max size for a single PutObject upload.
 	notaryS3MaxSingleUploadBytes = 5 * 1024 * 1024 * 1024
+	// notaryS3MinPartSizeBytes is the minimum part size for multipart uploads.
+	notaryS3MinPartSizeBytes = 5 * 1024 * 1024
+	// notaryS3DefaultPartSizeBytes is the default part size for multipart uploads.
+	notaryS3DefaultPartSizeBytes = 16 * 1024 * 1024
+	// notaryS3MaxParts is the maximum number of parts allowed in a multipart upload.
+	notaryS3MaxParts = 10000
 )
 
 // NotarySubmissionStatus represents the status of a notarization submission.
@@ -318,13 +327,18 @@ func UploadToS3(ctx context.Context, creds S3Credentials, data io.Reader, payloa
 	if contentLength <= 0 {
 		return fmt.Errorf("content length must be positive")
 	}
-	if contentLength > notaryS3MaxSingleUploadBytes {
-		return fmt.Errorf("file is too large for single-part upload (%d bytes)", contentLength)
-	}
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
 
+	if contentLength > notaryS3MaxSingleUploadBytes {
+		return uploadMultipartToS3(ctx, creds, data, contentLength, contentType)
+	}
+
+	return uploadSinglePartToS3(ctx, creds, data, payloadHash, contentLength, contentType)
+}
+
+func uploadSinglePartToS3(ctx context.Context, creds S3Credentials, data io.Reader, payloadHash string, contentLength int64, contentType string) error {
 	encodedPath, err := encodeS3ObjectPath(creds.Object)
 	if err != nil {
 		return fmt.Errorf("encode S3 object key: %w", err)
@@ -335,7 +349,6 @@ func UploadToS3(ctx context.Context, creds S3Credentials, data io.Reader, payloa
 	url := fmt.Sprintf("https://%s%s", host, encodedPath)
 
 	now := time.Now().UTC()
-	dateStamp := now.Format("20060102")
 	amzDate := now.Format("20060102T150405Z")
 
 	req, err := http.NewRequestWithContext(ctx, "PUT", url, data)
@@ -344,54 +357,17 @@ func UploadToS3(ctx context.Context, creds S3Credentials, data io.Reader, payloa
 	}
 
 	req.ContentLength = contentLength
-	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Host", host)
 	req.Header.Set("X-Amz-Date", amzDate)
 	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	req.Header.Set("Content-Type", contentType)
 	if creds.SessionToken != "" {
 		req.Header.Set("X-Amz-Security-Token", creds.SessionToken)
 	}
 
-	// AWS Signature V4
-	credentialScope := fmt.Sprintf("%s/%s/s3/aws4_request", dateStamp, notaryS3Region)
-
-	// Canonical request
-	canonicalHeaders := fmt.Sprintf("content-type:%s\nhost:%s\nx-amz-content-sha256:%s\nx-amz-date:%s\n",
-		contentType, host, payloadHash, amzDate)
-	signedHeaders := "content-type;host;x-amz-content-sha256;x-amz-date"
-	if creds.SessionToken != "" {
-		canonicalHeaders = fmt.Sprintf("content-type:%s\nhost:%s\nx-amz-content-sha256:%s\nx-amz-date:%s\nx-amz-security-token:%s\n",
-			contentType, host, payloadHash, amzDate, creds.SessionToken)
-		signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date;x-amz-security-token"
+	if err := signS3Request(req, creds, payloadHash, now); err != nil {
+		return err
 	}
-
-	canonicalRequest := strings.Join([]string{
-		"PUT",
-		encodedPath,
-		"", // query string (empty)
-		canonicalHeaders,
-		signedHeaders,
-		payloadHash,
-	}, "\n")
-
-	// String to sign
-	stringToSign := strings.Join([]string{
-		"AWS4-HMAC-SHA256",
-		amzDate,
-		credentialScope,
-		sha256Hex([]byte(canonicalRequest)),
-	}, "\n")
-
-	// Signing key
-	signingKey := deriveSigningKey(creds.SecretAccessKey, dateStamp, notaryS3Region, "s3")
-
-	// Signature
-	signature := hex.EncodeToString(hmacSHA256(signingKey, []byte(stringToSign)))
-
-	// Authorization header
-	authHeader := fmt.Sprintf("AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s",
-		creds.AccessKeyID, credentialScope, signedHeaders, signature)
-	req.Header.Set("Authorization", authHeader)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -404,6 +380,264 @@ func UploadToS3(ctx context.Context, creds S3Credentials, data io.Reader, payloa
 		return fmt.Errorf("S3 upload failed with status %d: %s", resp.StatusCode, sanitizeErrorBody(respBody))
 	}
 
+	return nil
+}
+
+func uploadMultipartToS3(ctx context.Context, creds S3Credentials, data io.Reader, contentLength int64, contentType string) error {
+	encodedPath, err := encodeS3ObjectPath(creds.Object)
+	if err != nil {
+		return fmt.Errorf("encode S3 object key: %w", err)
+	}
+
+	host := fmt.Sprintf("%s.s3.%s.amazonaws.com", creds.Bucket, notaryS3Region)
+	uploadID, err := createMultipartUpload(ctx, host, encodedPath, creds, contentType)
+	if err != nil {
+		return err
+	}
+
+	parts, err := uploadMultipartParts(ctx, host, encodedPath, creds, uploadID, data, contentLength)
+	if err != nil {
+		if abortErr := abortMultipartUpload(ctx, host, encodedPath, creds, uploadID); abortErr != nil {
+			return fmt.Errorf("%w (abort failed: %v)", err, abortErr)
+		}
+		return err
+	}
+
+	if err := completeMultipartUpload(ctx, host, encodedPath, creds, uploadID, parts); err != nil {
+		if abortErr := abortMultipartUpload(ctx, host, encodedPath, creds, uploadID); abortErr != nil {
+			return fmt.Errorf("%w (abort failed: %v)", err, abortErr)
+		}
+		return err
+	}
+
+	return nil
+}
+
+type s3CompletedPart struct {
+	PartNumber int
+	ETag       string
+}
+
+func uploadMultipartParts(ctx context.Context, host, encodedPath string, creds S3Credentials, uploadID string, data io.Reader, contentLength int64) ([]s3CompletedPart, error) {
+	partSize := calculateMultipartPartSize(contentLength)
+	partCount := int((contentLength + partSize - 1) / partSize)
+	if partCount > notaryS3MaxParts {
+		return nil, fmt.Errorf("multipart upload exceeds maximum parts (%d)", notaryS3MaxParts)
+	}
+
+	parts := make([]s3CompletedPart, 0, partCount)
+	buffer := make([]byte, int(partSize))
+	var offset int64
+
+	for partNumber := 1; offset < contentLength; partNumber++ {
+		remaining := contentLength - offset
+		partBytes := buffer
+		if remaining < int64(len(buffer)) {
+			partBytes = buffer[:remaining]
+		}
+
+		if _, err := io.ReadFull(data, partBytes); err != nil {
+			return nil, fmt.Errorf("read upload part %d: %w", partNumber, err)
+		}
+
+		etag, err := uploadMultipartPart(ctx, host, encodedPath, creds, uploadID, partNumber, partBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		parts = append(parts, s3CompletedPart{
+			PartNumber: partNumber,
+			ETag:       normalizeETag(etag),
+		})
+		offset += int64(len(partBytes))
+	}
+
+	return parts, nil
+}
+
+func createMultipartUpload(ctx context.Context, host, encodedPath string, creds S3Credentials, contentType string) (string, error) {
+	query := url.Values{}
+	query.Set("uploads", "")
+	rawQuery := encodeS3Query(query)
+
+	req, err := newS3Request(ctx, "POST", host, encodedPath, rawQuery, nil)
+	if err != nil {
+		return "", fmt.Errorf("create multipart request: %w", err)
+	}
+
+	payloadHash := sha256Hex(nil)
+	now := time.Now().UTC()
+	amzDate := now.Format("20060102T150405Z")
+	req.ContentLength = 0
+	req.Header.Set("Host", host)
+	req.Header.Set("X-Amz-Date", amzDate)
+	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	if strings.TrimSpace(contentType) != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if creds.SessionToken != "" {
+		req.Header.Set("X-Amz-Security-Token", creds.SessionToken)
+	}
+	if err := signS3Request(req, creds, payloadHash, now); err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("create multipart upload failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("create multipart upload failed with status %d: %s", resp.StatusCode, sanitizeErrorBody(respBody))
+	}
+
+	type createMultipartUploadResult struct {
+		UploadID string `xml:"UploadId"`
+	}
+	var result createMultipartUploadResult
+	if err := xml.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("parse multipart upload response: %w", err)
+	}
+	if strings.TrimSpace(result.UploadID) == "" {
+		return "", fmt.Errorf("multipart upload response missing upload ID")
+	}
+	return result.UploadID, nil
+}
+
+func uploadMultipartPart(ctx context.Context, host, encodedPath string, creds S3Credentials, uploadID string, partNumber int, partBytes []byte) (string, error) {
+	query := url.Values{}
+	query.Set("partNumber", fmt.Sprintf("%d", partNumber))
+	query.Set("uploadId", uploadID)
+	rawQuery := encodeS3Query(query)
+
+	req, err := newS3Request(ctx, "PUT", host, encodedPath, rawQuery, bytes.NewReader(partBytes))
+	if err != nil {
+		return "", fmt.Errorf("create multipart part request: %w", err)
+	}
+
+	payloadHash := sha256Hex(partBytes)
+	now := time.Now().UTC()
+	amzDate := now.Format("20060102T150405Z")
+	req.ContentLength = int64(len(partBytes))
+	req.Header.Set("Host", host)
+	req.Header.Set("X-Amz-Date", amzDate)
+	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	if creds.SessionToken != "" {
+		req.Header.Set("X-Amz-Security-Token", creds.SessionToken)
+	}
+	if err := signS3Request(req, creds, payloadHash, now); err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("upload part %d failed: %w", partNumber, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("upload part %d failed with status %d: %s", partNumber, resp.StatusCode, sanitizeErrorBody(respBody))
+	}
+
+	etag := resp.Header.Get("ETag")
+	if strings.TrimSpace(etag) == "" {
+		return "", fmt.Errorf("upload part %d response missing ETag", partNumber)
+	}
+
+	return etag, nil
+}
+
+func completeMultipartUpload(ctx context.Context, host, encodedPath string, creds S3Credentials, uploadID string, parts []s3CompletedPart) error {
+	query := url.Values{}
+	query.Set("uploadId", uploadID)
+	rawQuery := encodeS3Query(query)
+
+	type completeMultipartUploadPart struct {
+		PartNumber int    `xml:"PartNumber"`
+		ETag       string `xml:"ETag"`
+	}
+	type completeMultipartUploadRequest struct {
+		XMLName xml.Name                      `xml:"CompleteMultipartUpload"`
+		Parts   []completeMultipartUploadPart `xml:"Part"`
+	}
+	payload := completeMultipartUploadRequest{Parts: make([]completeMultipartUploadPart, 0, len(parts))}
+	for _, part := range parts {
+		payload.Parts = append(payload.Parts, completeMultipartUploadPart{
+			PartNumber: part.PartNumber,
+			ETag:       part.ETag,
+		})
+	}
+	bodyBytes, err := xml.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("build complete multipart payload: %w", err)
+	}
+
+	req, err := newS3Request(ctx, "POST", host, encodedPath, rawQuery, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("create complete multipart request: %w", err)
+	}
+
+	payloadHash := sha256Hex(bodyBytes)
+	now := time.Now().UTC()
+	amzDate := now.Format("20060102T150405Z")
+	req.ContentLength = int64(len(bodyBytes))
+	req.Header.Set("Host", host)
+	req.Header.Set("X-Amz-Date", amzDate)
+	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	req.Header.Set("Content-Type", "application/xml")
+	if creds.SessionToken != "" {
+		req.Header.Set("X-Amz-Security-Token", creds.SessionToken)
+	}
+	if err := signS3Request(req, creds, payloadHash, now); err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("complete multipart upload failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("complete multipart upload failed with status %d: %s", resp.StatusCode, sanitizeErrorBody(respBody))
+	}
+	return nil
+}
+
+func abortMultipartUpload(ctx context.Context, host, encodedPath string, creds S3Credentials, uploadID string) error {
+	query := url.Values{}
+	query.Set("uploadId", uploadID)
+	rawQuery := encodeS3Query(query)
+
+	req, err := newS3Request(ctx, "DELETE", host, encodedPath, rawQuery, nil)
+	if err != nil {
+		return fmt.Errorf("create abort request: %w", err)
+	}
+
+	payloadHash := sha256Hex(nil)
+	now := time.Now().UTC()
+	amzDate := now.Format("20060102T150405Z")
+	req.ContentLength = 0
+	req.Header.Set("Host", host)
+	req.Header.Set("X-Amz-Date", amzDate)
+	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	if creds.SessionToken != "" {
+		req.Header.Set("X-Amz-Security-Token", creds.SessionToken)
+	}
+	if err := signS3Request(req, creds, payloadHash, now); err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("abort multipart upload failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("abort multipart upload failed with status %d: %s", resp.StatusCode, sanitizeErrorBody(respBody))
+	}
 	return nil
 }
 
@@ -441,4 +675,139 @@ func encodeS3ObjectPath(object string) (string, error) {
 	}
 
 	return "/" + strings.Join(segments, "/"), nil
+}
+
+func encodeS3Query(values url.Values) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	parts := make([]string, 0)
+	for _, key := range keys {
+		vals := values[key]
+		sort.Strings(vals)
+		for _, val := range vals {
+			parts = append(parts, encodeQueryComponent(key)+"="+encodeQueryComponent(val))
+		}
+	}
+
+	return strings.Join(parts, "&")
+}
+
+func encodeQueryComponent(value string) string {
+	escaped := url.QueryEscape(value)
+	escaped = strings.ReplaceAll(escaped, "+", "%20")
+	escaped = strings.ReplaceAll(escaped, "%7E", "~")
+	return escaped
+}
+
+func canonicalQueryString(values url.Values) string {
+	return encodeS3Query(values)
+}
+
+func canonicalizeHeaders(headers map[string]string) (string, string) {
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	var canonicalBuilder strings.Builder
+	for _, key := range keys {
+		value := strings.TrimSpace(headers[key])
+		canonicalBuilder.WriteString(key)
+		canonicalBuilder.WriteString(":")
+		canonicalBuilder.WriteString(value)
+		canonicalBuilder.WriteString("\n")
+	}
+
+	signedHeaders := strings.Join(keys, ";")
+	return canonicalBuilder.String(), signedHeaders
+}
+
+func signS3Request(req *http.Request, creds S3Credentials, payloadHash string, now time.Time) error {
+	amzDate := now.Format("20060102T150405Z")
+	dateStamp := now.Format("20060102")
+
+	headers := map[string]string{
+		"host":                 req.Host,
+		"x-amz-content-sha256": payloadHash,
+		"x-amz-date":           amzDate,
+	}
+	if contentType := req.Header.Get("Content-Type"); contentType != "" {
+		headers["content-type"] = contentType
+	}
+	if securityToken := req.Header.Get("X-Amz-Security-Token"); securityToken != "" {
+		headers["x-amz-security-token"] = securityToken
+	}
+
+	canonicalHeaders, signedHeaders := canonicalizeHeaders(headers)
+	canonicalRequest := strings.Join([]string{
+		req.Method,
+		req.URL.EscapedPath(),
+		canonicalQueryString(req.URL.Query()),
+		canonicalHeaders,
+		signedHeaders,
+		payloadHash,
+	}, "\n")
+
+	credentialScope := fmt.Sprintf("%s/%s/s3/aws4_request", dateStamp, notaryS3Region)
+	stringToSign := strings.Join([]string{
+		"AWS4-HMAC-SHA256",
+		amzDate,
+		credentialScope,
+		sha256Hex([]byte(canonicalRequest)),
+	}, "\n")
+
+	signingKey := deriveSigningKey(creds.SecretAccessKey, dateStamp, notaryS3Region, "s3")
+	signature := hex.EncodeToString(hmacSHA256(signingKey, []byte(stringToSign)))
+
+	authHeader := fmt.Sprintf("AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s",
+		creds.AccessKeyID, credentialScope, signedHeaders, signature)
+	req.Header.Set("Authorization", authHeader)
+
+	return nil
+}
+
+func calculateMultipartPartSize(contentLength int64) int64 {
+	partSize := int64(notaryS3DefaultPartSizeBytes)
+	if contentLength <= partSize*notaryS3MaxParts {
+		return partSize
+	}
+
+	partSize = (contentLength + notaryS3MaxParts - 1) / notaryS3MaxParts
+	if partSize < notaryS3MinPartSizeBytes {
+		partSize = notaryS3MinPartSizeBytes
+	}
+	return partSize
+}
+
+func normalizeETag(etag string) string {
+	etag = strings.TrimSpace(etag)
+	if etag == "" {
+		return etag
+	}
+	if strings.HasPrefix(etag, "\"") && strings.HasSuffix(etag, "\"") {
+		return etag
+	}
+	return `"` + etag + `"`
+}
+
+func newS3Request(ctx context.Context, method, host, encodedPath, rawQuery string, body io.Reader) (*http.Request, error) {
+	url := fmt.Sprintf("https://%s%s", host, encodedPath)
+	if rawQuery != "" {
+		url = url + "?" + rawQuery
+	}
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Host = host
+	return req, nil
 }

@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -504,6 +505,50 @@ func TestUploadToS3_Validation(t *testing.T) {
 	}, strings.NewReader("data"), "hash", 0, "application/octet-stream")
 	if err == nil {
 		t.Fatal("expected error for invalid content length")
+	}
+}
+
+func TestEncodeS3Query(t *testing.T) {
+	values := url.Values{}
+	values.Set("uploads", "")
+	if got := encodeS3Query(values); got != "uploads=" {
+		t.Fatalf("expected uploads=, got %q", got)
+	}
+
+	values = url.Values{}
+	values.Add("partNumber", "2")
+	values.Add("partNumber", "1")
+	values.Set("uploadId", "foo:bar")
+	got := encodeS3Query(values)
+	want := "partNumber=1&partNumber=2&uploadId=foo%3Abar"
+	if got != want {
+		t.Fatalf("expected %q, got %q", want, got)
+	}
+}
+
+func TestCalculateMultipartPartSize(t *testing.T) {
+	defaultSize := int64(notaryS3DefaultPartSizeBytes)
+	size := calculateMultipartPartSize(notaryS3MaxSingleUploadBytes + 1)
+	if size != defaultSize {
+		t.Fatalf("expected default size %d, got %d", defaultSize, size)
+	}
+
+	huge := defaultSize*notaryS3MaxParts + 1
+	size = calculateMultipartPartSize(huge)
+	if size <= defaultSize {
+		t.Fatalf("expected size > %d for huge payload, got %d", defaultSize, size)
+	}
+	if size*notaryS3MaxParts < huge {
+		t.Fatalf("expected size to cover payload, got %d for %d bytes", size, huge)
+	}
+}
+
+func TestNormalizeETag(t *testing.T) {
+	if got := normalizeETag("\"abc\""); got != "\"abc\"" {
+		t.Fatalf("expected quoted etag to be preserved, got %q", got)
+	}
+	if got := normalizeETag("abc"); got != "\"abc\"" {
+		t.Fatalf("expected etag to be quoted, got %q", got)
 	}
 }
 
