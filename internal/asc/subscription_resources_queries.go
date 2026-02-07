@@ -72,10 +72,16 @@ type subscriptionOfferCodePricesQuery struct {
 
 type subscriptionPricePointsQuery struct {
 	listQuery
+	territory string
 }
 
 type subscriptionPricesQuery struct {
 	listQuery
+	territory        string
+	include          []string
+	priceFields      []string
+	pricePointFields []string
+	territoryFields  []string
 }
 
 type subscriptionGroupLocalizationsQuery struct {
@@ -244,6 +250,15 @@ func WithSubscriptionPricePointsNextURL(next string) SubscriptionPricePointsOpti
 	}
 }
 
+// WithSubscriptionPricePointsTerritory filters price points by territory (e.g., "USA").
+func WithSubscriptionPricePointsTerritory(territory string) SubscriptionPricePointsOption {
+	return func(q *subscriptionPricePointsQuery) {
+		if strings.TrimSpace(territory) != "" {
+			q.territory = strings.ToUpper(strings.TrimSpace(territory))
+		}
+	}
+}
+
 // WithSubscriptionPricesLimit sets the max number of prices to return.
 func WithSubscriptionPricesLimit(limit int) SubscriptionPricesOption {
 	return func(q *subscriptionPricesQuery) {
@@ -259,6 +274,36 @@ func WithSubscriptionPricesNextURL(next string) SubscriptionPricesOption {
 		if strings.TrimSpace(next) != "" {
 			q.nextURL = strings.TrimSpace(next)
 		}
+	}
+}
+
+// WithSubscriptionPricesTerritory filters subscription prices by territory (e.g., "USA").
+func WithSubscriptionPricesTerritory(territory string) SubscriptionPricesOption {
+	return func(q *subscriptionPricesQuery) {
+		if strings.TrimSpace(territory) != "" {
+			q.territory = strings.ToUpper(strings.TrimSpace(territory))
+		}
+	}
+}
+
+// WithSubscriptionPricesInclude sets the relationships to include (e.g., "subscriptionPricePoint", "territory").
+func WithSubscriptionPricesInclude(include []string) SubscriptionPricesOption {
+	return func(q *subscriptionPricesQuery) {
+		q.include = normalizeList(include)
+	}
+}
+
+// WithSubscriptionPricesPricePointFields sets fields for included subscriptionPricePoints.
+func WithSubscriptionPricesPricePointFields(fields []string) SubscriptionPricesOption {
+	return func(q *subscriptionPricesQuery) {
+		q.pricePointFields = normalizeList(fields)
+	}
+}
+
+// WithSubscriptionPricesTerritoryFields sets fields for included territories.
+func WithSubscriptionPricesTerritoryFields(fields []string) SubscriptionPricesOption {
+	return func(q *subscriptionPricesQuery) {
+		q.territoryFields = normalizeList(fields)
 	}
 }
 
@@ -330,12 +375,21 @@ func buildSubscriptionOfferCodePricesQuery(query *subscriptionOfferCodePricesQue
 
 func buildSubscriptionPricePointsQuery(query *subscriptionPricePointsQuery) string {
 	values := url.Values{}
+	if strings.TrimSpace(query.territory) != "" {
+		values.Set("filter[territory]", strings.TrimSpace(query.territory))
+	}
 	addLimit(values, query.limit)
 	return values.Encode()
 }
 
 func buildSubscriptionPricesQuery(query *subscriptionPricesQuery) string {
 	values := url.Values{}
+	if strings.TrimSpace(query.territory) != "" {
+		values.Set("filter[territory]", strings.TrimSpace(query.territory))
+	}
+	addCSV(values, "include", query.include)
+	addCSV(values, "fields[subscriptionPricePoints]", query.pricePointFields)
+	addCSV(values, "fields[territories]", query.territoryFields)
 	addLimit(values, query.limit)
 	return values.Encode()
 }

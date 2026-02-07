@@ -1,0 +1,482 @@
+package subscriptions
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"text/tabwriter"
+
+	"github.com/peterbourgon/ff/v3/ffcli"
+
+	"github.com/rudrankriyam/App-Store-Connect-CLI/internal/asc"
+)
+
+const defaultSubscriptionPricingWorkers = 4
+
+type subWithGroup struct {
+	Sub       asc.Resource[asc.SubscriptionAttributes]
+	GroupName string
+}
+
+type subscriptionPricingResult struct {
+	Subscriptions []subscriptionPriceSummary `json:"subscriptions"`
+}
+
+type subscriptionPriceSummary struct {
+	ID                 string    `json:"id"`
+	Name               string    `json:"name"`
+	ProductID          string    `json:"productId"`
+	SubscriptionPeriod string    `json:"subscriptionPeriod,omitempty"`
+	State              string    `json:"state,omitempty"`
+	GroupName          string    `json:"groupName,omitempty"`
+	CurrentPrice       *subMoney `json:"currentPrice,omitempty"`
+	Proceeds           *subMoney `json:"proceeds,omitempty"`
+	ProceedsYear2      *subMoney `json:"proceedsYear2,omitempty"`
+}
+
+type subMoney struct {
+	Amount   string `json:"amount"`
+	Currency string `json:"currency"`
+}
+
+// SubscriptionsPricingCommand returns a consolidated pricing summary command for subscriptions.
+func SubscriptionsPricingCommand() *ffcli.Command {
+	fs := flag.NewFlagSet("pricing", flag.ExitOnError)
+
+	appID := fs.String("app", "", "App Store Connect app ID (or ASC_APP_ID env)")
+	subscriptionID := fs.String("subscription-id", "", "Subscription ID")
+	territory := fs.String("territory", "USA", "Territory for pricing (e.g., USA)")
+	output := fs.String("output", "json", "Output format: json (default), table, markdown")
+	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
+
+	return &ffcli.Command{
+		Name:       "pricing",
+		ShortUsage: "asc subscriptions pricing [flags]",
+		ShortHelp:  "Show consolidated subscription pricing summary.",
+		LongHelp: `Show consolidated subscription pricing summary.
+
+Returns current price, proceeds, and proceeds year 2 for each subscription
+in the specified territory. Much faster than paginating through all 140K+
+price points.
+
+Examples:
+  asc subscriptions pricing --app "APP_ID"
+  asc subscriptions pricing --subscription-id "SUB_ID"
+  asc subscriptions pricing --app "APP_ID" --territory "USA" --output table`,
+		FlagSet:   fs,
+		UsageFunc: DefaultUsageFunc,
+		Exec: func(ctx context.Context, args []string) error {
+			requestedSubID := strings.TrimSpace(*subscriptionID)
+			requestedAppID := strings.TrimSpace(*appID)
+			if requestedSubID == "" && resolveAppID(requestedAppID) == "" {
+				fmt.Fprintln(os.Stderr, "Error: --app or --subscription-id is required")
+				return flag.ErrHelp
+			}
+			if requestedSubID != "" && requestedAppID != "" {
+				fmt.Fprintln(os.Stderr, "Error: --app and --subscription-id are mutually exclusive")
+				return flag.ErrHelp
+			}
+
+			territoryFilter := strings.ToUpper(strings.TrimSpace(*territory))
+			if territoryFilter == "" {
+				territoryFilter = "USA"
+			}
+
+			client, err := getASCClient()
+			if err != nil {
+				return fmt.Errorf("subscriptions pricing: %w", err)
+			}
+
+			var subs []subWithGroup
+
+			if requestedSubID != "" {
+				subCtx, subCancel := contextWithTimeout(ctx)
+				resp, err := client.GetSubscription(subCtx, requestedSubID)
+				subCancel()
+				if err != nil {
+					return fmt.Errorf("subscriptions pricing: failed to fetch subscription: %w", err)
+				}
+				subs = []subWithGroup{{Sub: resp.Data, GroupName: ""}}
+			} else {
+				resolvedAppID := resolveAppID(requestedAppID)
+
+				groupsCtx, groupsCancel := contextWithTimeout(ctx)
+				groupsResp, err := client.GetSubscriptionGroups(groupsCtx, resolvedAppID, asc.WithSubscriptionGroupsLimit(200))
+				groupsCancel()
+				if err != nil {
+					return fmt.Errorf("subscriptions pricing: failed to fetch groups: %w", err)
+				}
+
+				paginatedGroups, err := asc.PaginateAll(ctx, groupsResp, func(_ context.Context, nextURL string) (asc.PaginatedResponse, error) {
+					pageCtx, pageCancel := contextWithTimeout(ctx)
+					defer pageCancel()
+					return client.GetSubscriptionGroups(pageCtx, resolvedAppID, asc.WithSubscriptionGroupsNextURL(nextURL))
+				})
+				if err != nil {
+					return fmt.Errorf("subscriptions pricing: paginate groups: %w", err)
+				}
+
+				groups, ok := paginatedGroups.(*asc.SubscriptionGroupsResponse)
+				if !ok {
+					return fmt.Errorf("subscriptions pricing: unexpected groups response type %T", paginatedGroups)
+				}
+
+				for _, group := range groups.Data {
+					subsCtx, subsCancel := contextWithTimeout(ctx)
+					subsResp, err := client.GetSubscriptions(subsCtx, group.ID, asc.WithSubscriptionsLimit(200))
+					subsCancel()
+					if err != nil {
+						return fmt.Errorf("subscriptions pricing: failed to fetch subscriptions for group %s: %w", group.ID, err)
+					}
+
+					paginatedSubs, err := asc.PaginateAll(ctx, subsResp, func(_ context.Context, nextURL string) (asc.PaginatedResponse, error) {
+						pageCtx, pageCancel := contextWithTimeout(ctx)
+						defer pageCancel()
+						return client.GetSubscriptions(pageCtx, group.ID, asc.WithSubscriptionsNextURL(nextURL))
+					})
+					if err != nil {
+						return fmt.Errorf("subscriptions pricing: paginate subscriptions: %w", err)
+					}
+
+					subsResult, ok := paginatedSubs.(*asc.SubscriptionsResponse)
+					if !ok {
+						return fmt.Errorf("subscriptions pricing: unexpected subscriptions response type %T", paginatedSubs)
+					}
+
+					groupName := group.Attributes.ReferenceName
+					for _, sub := range subsResult.Data {
+						subs = append(subs, subWithGroup{Sub: sub, GroupName: groupName})
+					}
+				}
+			}
+
+			if len(subs) == 0 {
+				return printSubscriptionPricingResult(&subscriptionPricingResult{Subscriptions: []subscriptionPriceSummary{}}, *output, *pretty)
+			}
+
+			summaries, err := resolveSubscriptionPriceSummaries(ctx, client, subs, territoryFilter)
+			if err != nil {
+				return fmt.Errorf("subscriptions pricing: %w", err)
+			}
+
+			return printSubscriptionPricingResult(&subscriptionPricingResult{Subscriptions: summaries}, *output, *pretty)
+		},
+	}
+}
+
+func resolveSubscriptionPriceSummaries(
+	ctx context.Context,
+	client *asc.Client,
+	subs []subWithGroup,
+	territory string,
+) ([]subscriptionPriceSummary, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("context cancelled: %w", err)
+	}
+
+	if len(subs) == 0 {
+		return []subscriptionPriceSummary{}, nil
+	}
+
+	workers := defaultSubscriptionPricingWorkers
+	if len(subs) < workers {
+		workers = len(subs)
+	}
+	if workers < 1 {
+		workers = 1
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	sem := make(chan struct{}, workers)
+	results := make([]subscriptionPriceSummary, len(subs))
+	errs := make(chan error, len(subs))
+	var once sync.Once
+	var wg sync.WaitGroup
+
+	for idx := range subs {
+		idx := idx
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+			case <-ctx.Done():
+				return
+			}
+			defer func() { <-sem }()
+
+			summary, err := resolveSubscriptionPriceSummary(ctx, client, subs[idx], territory)
+			if err != nil {
+				once.Do(cancel)
+				errs <- fmt.Errorf("resolve %s: %w", subs[idx].Sub.ID, err)
+				return
+			}
+			results[idx] = summary
+		}()
+	}
+
+	wg.Wait()
+	close(errs)
+
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("context cancelled: %w", err)
+	}
+
+	for err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return results, nil
+}
+
+func resolveSubscriptionPriceSummary(
+	ctx context.Context,
+	client *asc.Client,
+	sub subWithGroup,
+	territory string,
+) (subscriptionPriceSummary, error) {
+	summary := subscriptionPriceSummary{
+		ID:                 sub.Sub.ID,
+		Name:               sub.Sub.Attributes.Name,
+		ProductID:          sub.Sub.Attributes.ProductID,
+		SubscriptionPeriod: sub.Sub.Attributes.SubscriptionPeriod,
+		State:              sub.Sub.Attributes.State,
+		GroupName:          sub.GroupName,
+	}
+
+	// Use the subscription prices endpoint with include=subscriptionPricePoint,territory
+	// and filter[territory]=<territory>. This returns just the current price assignment
+	// for the target territory with the price point data included -- one API call total.
+	pricesCtx, pricesCancel := contextWithTimeout(ctx)
+	pricesResp, err := client.GetSubscriptionPrices(
+		pricesCtx,
+		sub.Sub.ID,
+		asc.WithSubscriptionPricesTerritory(territory),
+		asc.WithSubscriptionPricesInclude([]string{"subscriptionPricePoint", "territory"}),
+		asc.WithSubscriptionPricesPricePointFields([]string{"customerPrice", "proceeds", "proceedsYear2"}),
+		asc.WithSubscriptionPricesTerritoryFields([]string{"currency"}),
+		asc.WithSubscriptionPricesLimit(10),
+	)
+	pricesCancel()
+	if err != nil {
+		return summary, fmt.Errorf("fetch prices: %w", err)
+	}
+
+	// Parse the included resources for price point values and territory currencies
+	pricePointValues, currencies := parseSubscriptionPricesIncluded(pricesResp.Included)
+
+	// Find the currency for the target territory
+	currency := currencies[strings.ToUpper(territory)]
+	if currency == "" {
+		currency = territoryToCurrency(territory)
+	}
+
+	// Match the price to the included price point
+	for _, price := range pricesResp.Data {
+		ppID := extractSubscriptionPricePointID(price)
+		if ppID == "" {
+			continue
+		}
+
+		value, ok := pricePointValues[ppID]
+		if !ok {
+			continue
+		}
+
+		if value.CustomerPrice != "" {
+			summary.CurrentPrice = &subMoney{Amount: value.CustomerPrice, Currency: currency}
+		}
+		if value.Proceeds != "" {
+			summary.Proceeds = &subMoney{Amount: value.Proceeds, Currency: currency}
+		}
+		if value.ProceedsYear2 != "" {
+			summary.ProceedsYear2 = &subMoney{Amount: value.ProceedsYear2, Currency: currency}
+		}
+		break // we only need the first matching price for this territory
+	}
+
+	return summary, nil
+}
+
+type subscriptionPricePointValue struct {
+	CustomerPrice string
+	Proceeds      string
+	ProceedsYear2 string
+}
+
+func parseSubscriptionPricesIncluded(raw json.RawMessage) (map[string]subscriptionPricePointValue, map[string]string) {
+	values := make(map[string]subscriptionPricePointValue)
+	currencies := make(map[string]string)
+
+	if len(raw) == 0 {
+		return values, currencies
+	}
+
+	var included []struct {
+		Type       string          `json:"type"`
+		ID         string          `json:"id"`
+		Attributes json.RawMessage `json:"attributes"`
+	}
+	if err := json.Unmarshal(raw, &included); err != nil {
+		return values, currencies
+	}
+
+	for _, item := range included {
+		switch item.Type {
+		case "subscriptionPricePoints":
+			var attrs asc.SubscriptionPricePointAttributes
+			if err := json.Unmarshal(item.Attributes, &attrs); err != nil {
+				continue
+			}
+			values[item.ID] = subscriptionPricePointValue{
+				CustomerPrice: strings.TrimSpace(attrs.CustomerPrice),
+				Proceeds:      strings.TrimSpace(attrs.Proceeds),
+				ProceedsYear2: strings.TrimSpace(attrs.ProceedsYear2),
+			}
+		case "territories":
+			var attrs struct {
+				Currency string `json:"currency"`
+			}
+			if err := json.Unmarshal(item.Attributes, &attrs); err != nil {
+				continue
+			}
+			if currency := strings.TrimSpace(attrs.Currency); currency != "" {
+				currencies[strings.ToUpper(strings.TrimSpace(item.ID))] = currency
+			}
+		}
+	}
+
+	return values, currencies
+}
+
+func extractSubscriptionPricePointID(price asc.Resource[asc.SubscriptionPriceAttributes]) string {
+	if price.Relationships == nil {
+		return ""
+	}
+
+	var rels struct {
+		SubscriptionPricePoint *asc.Relationship `json:"subscriptionPricePoint"`
+	}
+
+	rawRels, err := json.Marshal(price.Relationships)
+	if err != nil {
+		return ""
+	}
+	if err := json.Unmarshal(rawRels, &rels); err != nil {
+		return ""
+	}
+
+	if rels.SubscriptionPricePoint == nil {
+		return ""
+	}
+
+	return strings.TrimSpace(rels.SubscriptionPricePoint.Data.ID)
+}
+
+// territoryToCurrency maps common territories to their currency codes.
+func territoryToCurrency(territory string) string {
+	currencies := map[string]string{
+		"USA": "USD", "CAN": "CAD", "GBR": "GBP", "AUS": "AUD",
+		"JPN": "JPY", "DEU": "EUR", "FRA": "EUR", "ITA": "EUR",
+		"ESP": "EUR", "NLD": "EUR", "BEL": "EUR", "AUT": "EUR",
+		"FIN": "EUR", "GRC": "EUR", "IRL": "EUR", "PRT": "EUR",
+		"CHN": "CNY", "KOR": "KRW", "BRA": "BRL", "MEX": "MXN",
+		"IND": "INR", "RUS": "RUB", "CHE": "CHF", "SWE": "SEK",
+		"NOR": "NOK", "DNK": "DKK", "POL": "PLN", "TUR": "TRY",
+		"ZAF": "ZAR", "SGP": "SGD", "HKG": "HKD", "TWN": "TWD",
+		"THA": "THB", "MYS": "MYR", "IDN": "IDR", "PHL": "PHP",
+		"VNM": "VND", "NZL": "NZD", "SAU": "SAR", "ARE": "AED",
+		"ISR": "ILS", "EGY": "EGP", "COL": "COP", "CHL": "CLP",
+		"PER": "PEN", "ARG": "ARS",
+	}
+	if c, ok := currencies[strings.ToUpper(territory)]; ok {
+		return c
+	}
+	return territory
+}
+
+func printSubscriptionPricingResult(result *subscriptionPricingResult, format string, pretty bool) error {
+	switch strings.ToLower(strings.TrimSpace(format)) {
+	case "json":
+		return printOutput(result, "json", pretty)
+	case "table":
+		if pretty {
+			return fmt.Errorf("--pretty is only valid with JSON output")
+		}
+		return printSubscriptionPricingTable(result)
+	case "markdown", "md":
+		if pretty {
+			return fmt.Errorf("--pretty is only valid with JSON output")
+		}
+		return printSubscriptionPricingMarkdown(result)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func printSubscriptionPricingTable(result *subscriptionPricingResult) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tName\tProduct ID\tPeriod\tState\tGroup\tCurrent Price\tProceeds\tProceeds Y2")
+	for _, item := range result.Subscriptions {
+		fmt.Fprintf(
+			w,
+			"%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			item.ID,
+			compactSubText(item.Name),
+			item.ProductID,
+			item.SubscriptionPeriod,
+			item.State,
+			compactSubText(item.GroupName),
+			formatSubMoney(item.CurrentPrice),
+			formatSubMoney(item.Proceeds),
+			formatSubMoney(item.ProceedsYear2),
+		)
+	}
+	return w.Flush()
+}
+
+func printSubscriptionPricingMarkdown(result *subscriptionPricingResult) error {
+	fmt.Fprintln(os.Stdout, "| ID | Name | Product ID | Period | State | Group | Current Price | Proceeds | Proceeds Y2 |")
+	fmt.Fprintln(os.Stdout, "| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	for _, item := range result.Subscriptions {
+		fmt.Fprintf(
+			os.Stdout,
+			"| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			escapeSubCell(item.ID),
+			escapeSubCell(item.Name),
+			escapeSubCell(item.ProductID),
+			escapeSubCell(item.SubscriptionPeriod),
+			escapeSubCell(item.State),
+			escapeSubCell(item.GroupName),
+			escapeSubCell(formatSubMoney(item.CurrentPrice)),
+			escapeSubCell(formatSubMoney(item.Proceeds)),
+			escapeSubCell(formatSubMoney(item.ProceedsYear2)),
+		)
+	}
+	return nil
+}
+
+func formatSubMoney(value *subMoney) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimSpace(value.Amount) + " " + strings.TrimSpace(value.Currency))
+}
+
+func escapeSubCell(value string) string {
+	value = strings.ReplaceAll(value, "|", "\\|")
+	value = strings.ReplaceAll(value, "\n", " ")
+	return strings.TrimSpace(value)
+}
+
+func compactSubText(value string) string {
+	return strings.Join(strings.Fields(value), " ")
+}

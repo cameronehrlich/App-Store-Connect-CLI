@@ -24,7 +24,8 @@ func SubscriptionsCommand() *ffcli.Command {
 
 Examples:
   asc subscriptions groups list --app "APP_ID"
-  asc subscriptions groups create --app "APP_ID" --reference-name "Premium"
+  asc subscriptions pricing --app "APP_ID"
+  asc subscriptions pricing --app "APP_ID" --territory "USA" --output table
   asc subscriptions list --group "GROUP_ID"
   asc subscriptions create --group "GROUP_ID" --ref-name "Monthly" --product-id "com.example.sub.monthly"
   asc subscriptions prices add --id "SUB_ID" --price-point "PRICE_POINT_ID"
@@ -33,6 +34,7 @@ Examples:
 		UsageFunc: DefaultUsageFunc,
 		Subcommands: []*ffcli.Command{
 			SubscriptionsGroupsCommand(),
+			SubscriptionsPricingCommand(),
 			SubscriptionsListCommand(),
 			SubscriptionsCreateCommand(),
 			SubscriptionsGetCommand(),
