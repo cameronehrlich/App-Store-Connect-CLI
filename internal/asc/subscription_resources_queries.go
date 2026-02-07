@@ -79,7 +79,6 @@ type subscriptionPricesQuery struct {
 	listQuery
 	territory        string
 	include          []string
-	priceFields      []string
 	pricePointFields []string
 	territoryFields  []string
 }

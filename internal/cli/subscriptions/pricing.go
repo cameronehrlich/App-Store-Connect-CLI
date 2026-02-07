@@ -224,14 +224,14 @@ func resolveSubscriptionPriceSummaries(
 	wg.Wait()
 	close(errs)
 
-	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("context cancelled: %w", err)
-	}
-
 	for err := range errs {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("context cancelled: %w", err)
 	}
 
 	return results, nil
