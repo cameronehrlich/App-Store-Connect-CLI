@@ -320,6 +320,194 @@ func TestAppTagsListOutputErrors(t *testing.T) {
 	}
 }
 
+func TestAppTagsListRejectsInvalidNextURL(t *testing.T) {
+	root := RootCommand("1.2.3")
+	root.FlagSet.SetOutput(io.Discard)
+
+	var runErr error
+	stdout, stderr := captureOutput(t, func() {
+		if err := root.Parse([]string{
+			"app-tags", "list",
+			"--next", "http://api.appstoreconnect.apple.com/v1/apps/app-1/appTags?cursor=AQ",
+		}); err != nil {
+			t.Fatalf("parse error: %v", err)
+		}
+		runErr = root.Run(context.Background())
+	})
+
+	if runErr == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(runErr.Error(), "app-tags list: --next must be an App Store Connect URL") {
+		t.Fatalf("expected invalid --next error, got %v", runErr)
+	}
+	if stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("expected empty stderr, got %q", stderr)
+	}
+}
+
+func TestAppTagsListPaginateWithFiltersUsesQueryOptions(t *testing.T) {
+	setupAuth(t)
+	t.Setenv("ASC_CONFIG_PATH", filepath.Join(t.TempDir(), "nonexistent.json"))
+	t.Setenv("ASC_APP_ID", "")
+
+	const secondURL = "https://api.appstoreconnect.apple.com/v1/apps/app-1/appTags?cursor=BQ&limit=200"
+
+	originalTransport := http.DefaultTransport
+	t.Cleanup(func() {
+		http.DefaultTransport = originalTransport
+	})
+
+	requestCount := 0
+	http.DefaultTransport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		requestCount++
+		switch requestCount {
+		case 1:
+			if req.Method != http.MethodGet || req.URL.Path != "/v1/apps/app-1/appTags" {
+				t.Fatalf("unexpected first request: %s %s", req.Method, req.URL.String())
+			}
+			query := req.URL.Query()
+			if query.Get("filter[visibleInAppStore]") != "true,false" {
+				t.Fatalf("expected visibility filter true,false, got %q", query.Get("filter[visibleInAppStore]"))
+			}
+			if query.Get("sort") != "-name" {
+				t.Fatalf("expected sort -name, got %q", query.Get("sort"))
+			}
+			if query.Get("fields[appTags]") != "name,visibleInAppStore" {
+				t.Fatalf("expected app tag fields, got %q", query.Get("fields[appTags]"))
+			}
+			if query.Get("include") != "territories" {
+				t.Fatalf("expected include territories, got %q", query.Get("include"))
+			}
+			if query.Get("fields[territories]") != "currency" {
+				t.Fatalf("expected territory fields currency, got %q", query.Get("fields[territories]"))
+			}
+			if query.Get("limit[territories]") != "2" {
+				t.Fatalf("expected territory limit 2, got %q", query.Get("limit[territories]"))
+			}
+			if query.Get("limit") != "200" {
+				t.Fatalf("expected paginate first-page limit=200, got %q", query.Get("limit"))
+			}
+
+			body := `{
+				"data":[{"type":"appTags","id":"tag-page-1"}],
+				"links":{"next":"` + secondURL + `"}
+			}`
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+			}, nil
+		case 2:
+			if req.Method != http.MethodGet || req.URL.String() != secondURL {
+				t.Fatalf("unexpected second request: %s %s", req.Method, req.URL.String())
+			}
+			body := `{
+				"data":[{"type":"appTags","id":"tag-page-2"}],
+				"links":{"next":""}
+			}`
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+			}, nil
+		default:
+			t.Fatalf("unexpected extra request: %s %s", req.Method, req.URL.String())
+			return nil, nil
+		}
+	})
+
+	root := RootCommand("1.2.3")
+	root.FlagSet.SetOutput(io.Discard)
+
+	stdout, stderr := captureOutput(t, func() {
+		if err := root.Parse([]string{
+			"app-tags", "list",
+			"--app", "app-1",
+			"--visible-in-app-store", "true,false",
+			"--sort", "-name",
+			"--fields", "name,visibleInAppStore",
+			"--include", "territories",
+			"--territory-fields", "currency",
+			"--territory-limit", "2",
+			"--paginate",
+		}); err != nil {
+			t.Fatalf("parse error: %v", err)
+		}
+		if err := root.Run(context.Background()); err != nil {
+			t.Fatalf("run error: %v", err)
+		}
+	})
+
+	if stderr != "" {
+		t.Fatalf("expected empty stderr, got %q", stderr)
+	}
+	if !strings.Contains(stdout, `"id":"tag-page-1"`) || !strings.Contains(stdout, `"id":"tag-page-2"`) {
+		t.Fatalf("expected both paginated tags in output, got %q", stdout)
+	}
+}
+
+func TestAppTagsListValidationErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+		isHelp  bool
+	}{
+		{
+			name:    "invalid fields",
+			args:    []string{"app-tags", "list", "--app", "app-1", "--paginate", "--fields", "name,bad"},
+			wantErr: "app-tags list: --fields must be one of:",
+		},
+		{
+			name:    "territory fields require include",
+			args:    []string{"app-tags", "list", "--app", "app-1", "--paginate", "--territory-fields", "currency"},
+			wantErr: "Error: --territory-fields requires --include territories",
+			isHelp:  true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			var runErr error
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse(test.args); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				runErr = root.Run(context.Background())
+			})
+
+			if runErr == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if test.isHelp {
+				if !errors.Is(runErr, flag.ErrHelp) {
+					t.Fatalf("expected ErrHelp, got %v", runErr)
+				}
+				if !strings.Contains(stderr, test.wantErr) {
+					t.Fatalf("expected stderr %q, got %q", test.wantErr, stderr)
+				}
+			} else {
+				if errors.Is(runErr, flag.ErrHelp) {
+					t.Fatalf("expected non-help error, got %v", runErr)
+				}
+				if !strings.Contains(runErr.Error(), test.wantErr) {
+					t.Fatalf("expected error %q, got %v", test.wantErr, runErr)
+				}
+			}
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+		})
+	}
+}
+
 func TestAppTagsListPaginateFromNextWithoutApp(t *testing.T) {
 	setupAuth(t)
 	t.Setenv("ASC_CONFIG_PATH", filepath.Join(t.TempDir(), "nonexistent.json"))

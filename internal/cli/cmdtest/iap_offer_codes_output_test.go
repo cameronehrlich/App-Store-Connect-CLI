@@ -199,6 +199,56 @@ func TestIAPOfferCodesListRejectsInvalidNextURL(t *testing.T) {
 	}
 }
 
+func TestIAPOfferCodesListRejectsMalformedNextURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		next    string
+		wantErr string
+	}{
+		{
+			name:    "invalid scheme",
+			next:    "http://api.appstoreconnect.apple.com/v2/inAppPurchases/iap-1/offerCodes?cursor=AQ",
+			wantErr: "iap offer-codes list: --next must be an App Store Connect URL",
+		},
+		{
+			name:    "malformed URL",
+			next:    "https://api.appstoreconnect.apple.com/%zz",
+			wantErr: "iap offer-codes list: --next must be a valid URL:",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := RootCommand("1.2.3")
+			root.FlagSet.SetOutput(io.Discard)
+
+			var runErr error
+			stdout, stderr := captureOutput(t, func() {
+				if err := root.Parse([]string{
+					"iap", "offer-codes", "list",
+					"--next", test.next,
+				}); err != nil {
+					t.Fatalf("parse error: %v", err)
+				}
+				runErr = root.Run(context.Background())
+			})
+
+			if runErr == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(runErr.Error(), test.wantErr) {
+				t.Fatalf("expected error %q, got %v", test.wantErr, runErr)
+			}
+			if stdout != "" {
+				t.Fatalf("expected empty stdout, got %q", stdout)
+			}
+			if stderr != "" {
+				t.Fatalf("expected empty stderr, got %q", stderr)
+			}
+		})
+	}
+}
+
 func TestIAPOfferCodesListOutputErrors(t *testing.T) {
 	setupAuth(t)
 	t.Setenv("ASC_CONFIG_PATH", filepath.Join(t.TempDir(), "nonexistent.json"))

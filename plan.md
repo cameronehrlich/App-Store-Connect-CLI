@@ -131,6 +131,15 @@ Goal: eliminate current `0.0%` coverage packages by adding package-local tests i
 - [x] `internal/cli/subscriptions` (`offer-codes list --paginate --next` without `--subscription-id` + markdown rendering path)
 - [x] Commit Phase 12
 
+## Phase 13 - `--next` Validation Matrix and Paginated Filter Validation
+
+- [x] `internal/cli/apps` (`app-tags list` invalid `--next` + paginated filter/include query coverage)
+- [x] `internal/cli/apps` (`app-tags list` invalid `--fields` and `--territory-fields` include requirement)
+- [x] `internal/cli/testflight` (`metrics beta-tester-usages` invalid/malformed `--next` validation)
+- [x] `internal/cli/iap` (`offer-codes list` malformed `--next` validation)
+- [x] `internal/cli/subscriptions` (`offer-codes list` invalid/malformed `--next` validation)
+- [x] Commit Phase 13
+
 ## Validation Gate (after each phase and at end)
 
 - [x] `go test -short ./...`
