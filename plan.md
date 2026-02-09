@@ -193,6 +193,12 @@ Goal: eliminate current `0.0%` coverage packages by adding package-local tests i
 - [x] `internal/cli/testflight` (`beta-testers builds list` invalid/malformed `--next` validation + `--paginate --next` path)
 - [x] Commit Phase 20
 
+## Phase 21 - `--next` Parity for TestFlight License and Tester Metrics Lists
+
+- [x] `internal/cli/testflight` (`beta-license-agreements list` invalid/malformed `--next` validation + `--paginate --next` path)
+- [x] `internal/cli/testflight` (`beta-testers metrics` invalid/malformed `--next` validation + `--next` path without required `--tester-id/--app`)
+- [x] Commit Phase 21
+
 ## Validation Gate (after each phase and at end)
 
 - [x] `go test -short ./...`
