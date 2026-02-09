@@ -246,6 +246,15 @@ Goal: eliminate current `0.0%` coverage packages by adding package-local tests i
 - [x] `internal/cli/prerelease` (`pre-release-versions relationships get --type builds` invalid/malformed `--next` validation + `--paginate --next` without `--id`)
 - [x] Commit Phase 27
 
+## Phase 28 - `--next` Parity for Localizations Lists and Media-Set Relationships
+
+- [x] `internal/cli/localizations` (`localizations list` invalid/malformed `--next` validation + `--paginate --next` path)
+- [x] `internal/cli/localizations` (`localizations preview-sets list` invalid/malformed `--next` validation + `--paginate --next` without `--localization-id`)
+- [x] `internal/cli/localizations` (`localizations preview-sets relationships` invalid/malformed `--next` validation + `--paginate --next` without `--localization-id`)
+- [x] `internal/cli/localizations` (`localizations screenshot-sets list` invalid/malformed `--next` validation + `--paginate --next` without `--localization-id`)
+- [x] `internal/cli/localizations` (`localizations screenshot-sets relationships` invalid/malformed `--next` validation + `--paginate --next` without `--localization-id`)
+- [x] Commit Phase 28
+
 ## Validation Gate (after each phase and at end)
 
 - [x] `go test -short ./...`
