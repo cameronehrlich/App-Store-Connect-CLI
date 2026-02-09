@@ -214,6 +214,14 @@ Goal: eliminate current `0.0%` coverage packages by adding package-local tests i
 - [x] `internal/cli/profiles` (`profiles relationships devices` invalid/malformed extraction `--next` + `--paginate --next` without `--id`)
 - [x] Commit Phase 23
 
+## Phase 24 - `--next` Parity for Certificates, Agreements, Nominations, and Accessibility Lists
+
+- [x] `internal/cli/certificates` (`certificates list` invalid/malformed `--next` validation + `--paginate --next` path)
+- [x] `internal/cli/agreements` (`agreements territories list` invalid/malformed extraction `--next` + `--paginate --next` without `--id`)
+- [x] `internal/cli/nominations` (`nominations list` invalid/malformed `--next` validation + `--paginate --next` path)
+- [x] `internal/cli/accessibility` (`accessibility list` invalid/malformed `--next` validation + `--paginate --next` without `--app`)
+- [x] Commit Phase 24
+
 ## Validation Gate (after each phase and at end)
 
 - [x] `go test -short ./...`
