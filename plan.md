@@ -414,6 +414,12 @@ Goal: eliminate current `0.0%` coverage packages by adding package-local tests i
 - [x] `internal/cli/builds` (`builds uploads list` invalid/malformed `--next` validation + `--paginate --next` without `--app`)
 - [x] Commit Phase 48
 
+## Phase 49 - `--next` Parity for Category Subcategory and Encryption Declaration Lists
+
+- [x] `internal/cli/categories` (`categories subcategories` invalid/malformed `--next` validation + `--paginate --next` without `--category-id`)
+- [x] `internal/cli/encryption` (`encryption declarations list` invalid/malformed `--next` validation + `--paginate --next` without `--app`)
+- [x] Commit Phase 49
+
 ## Validation Gate (after each phase and at end)
 
 - [x] `go test -short ./...`
