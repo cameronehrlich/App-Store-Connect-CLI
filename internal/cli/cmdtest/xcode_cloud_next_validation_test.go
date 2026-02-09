@@ -405,3 +405,111 @@ func TestXcodeCloudProductsAdditionalRepositoriesPaginateFromNextWithoutID(t *te
 		"ci-product-additional-repo-next-2",
 	)
 }
+
+func TestXcodeCloudMacOSVersionsListRejectsInvalidNextURL(t *testing.T) {
+	runXcodeCloudInvalidNextURLCases(
+		t,
+		[]string{"xcode-cloud", "macos-versions", "list"},
+		"xcode-cloud macos-versions: ",
+	)
+}
+
+func TestXcodeCloudMacOSVersionsListPaginateFromNext(t *testing.T) {
+	const firstURL = "https://api.appstoreconnect.apple.com/v1/ciMacOsVersions?cursor=AQ&limit=200"
+	const secondURL = "https://api.appstoreconnect.apple.com/v1/ciMacOsVersions?cursor=BQ&limit=200"
+
+	firstBody := `{"data":[{"type":"ciMacOsVersions","id":"ci-macos-next-1"}],"links":{"next":"` + secondURL + `"}}`
+	secondBody := `{"data":[{"type":"ciMacOsVersions","id":"ci-macos-next-2"}],"links":{"next":""}}`
+
+	runXcodeCloudPaginateFromNext(
+		t,
+		[]string{"xcode-cloud", "macos-versions", "list"},
+		firstURL,
+		secondURL,
+		firstBody,
+		secondBody,
+		"ci-macos-next-1",
+		"ci-macos-next-2",
+	)
+}
+
+func TestXcodeCloudXcodeVersionsListRejectsInvalidNextURL(t *testing.T) {
+	runXcodeCloudInvalidNextURLCases(
+		t,
+		[]string{"xcode-cloud", "xcode-versions", "list"},
+		"xcode-cloud xcode-versions: ",
+	)
+}
+
+func TestXcodeCloudXcodeVersionsListPaginateFromNext(t *testing.T) {
+	const firstURL = "https://api.appstoreconnect.apple.com/v1/ciXcodeVersions?cursor=AQ&limit=200"
+	const secondURL = "https://api.appstoreconnect.apple.com/v1/ciXcodeVersions?cursor=BQ&limit=200"
+
+	firstBody := `{"data":[{"type":"ciXcodeVersions","id":"ci-xcode-next-1"}],"links":{"next":"` + secondURL + `"}}`
+	secondBody := `{"data":[{"type":"ciXcodeVersions","id":"ci-xcode-next-2"}],"links":{"next":""}}`
+
+	runXcodeCloudPaginateFromNext(
+		t,
+		[]string{"xcode-cloud", "xcode-versions", "list"},
+		firstURL,
+		secondURL,
+		firstBody,
+		secondBody,
+		"ci-xcode-next-1",
+		"ci-xcode-next-2",
+	)
+}
+
+func TestXcodeCloudMacOSVersionsXcodeVersionsRejectsInvalidNextURL(t *testing.T) {
+	runXcodeCloudInvalidNextURLCases(
+		t,
+		[]string{"xcode-cloud", "macos-versions", "xcode-versions"},
+		"xcode-cloud macos-versions xcode-versions: ",
+	)
+}
+
+func TestXcodeCloudMacOSVersionsXcodeVersionsPaginateFromNextWithoutID(t *testing.T) {
+	const firstURL = "https://api.appstoreconnect.apple.com/v1/ciMacOsVersions/macos-1/xcodeVersions?cursor=AQ&limit=200"
+	const secondURL = "https://api.appstoreconnect.apple.com/v1/ciMacOsVersions/macos-1/xcodeVersions?cursor=BQ&limit=200"
+
+	firstBody := `{"data":[{"type":"ciXcodeVersions","id":"ci-macos-xcode-next-1"}],"links":{"next":"` + secondURL + `"}}`
+	secondBody := `{"data":[{"type":"ciXcodeVersions","id":"ci-macos-xcode-next-2"}],"links":{"next":""}}`
+
+	runXcodeCloudPaginateFromNext(
+		t,
+		[]string{"xcode-cloud", "macos-versions", "xcode-versions"},
+		firstURL,
+		secondURL,
+		firstBody,
+		secondBody,
+		"ci-macos-xcode-next-1",
+		"ci-macos-xcode-next-2",
+	)
+}
+
+func TestXcodeCloudXcodeVersionsMacOSVersionsRejectsInvalidNextURL(t *testing.T) {
+	runXcodeCloudInvalidNextURLCases(
+		t,
+		[]string{"xcode-cloud", "xcode-versions", "macos-versions"},
+		"xcode-cloud xcode-versions macos-versions: ",
+	)
+}
+
+func TestXcodeCloudXcodeVersionsMacOSVersionsPaginateFromNextWithoutID(t *testing.T) {
+	const firstURL = "https://api.appstoreconnect.apple.com/v1/ciXcodeVersions/xcode-1/macOsVersions?cursor=AQ&limit=200"
+	const secondURL = "https://api.appstoreconnect.apple.com/v1/ciXcodeVersions/xcode-1/macOsVersions?cursor=BQ&limit=200"
+
+	firstBody := `{"data":[{"type":"ciMacOsVersions","id":"ci-xcode-macos-next-1"}],"links":{"next":"` + secondURL + `"}}`
+	secondBody := `{"data":[{"type":"ciMacOsVersions","id":"ci-xcode-macos-next-2"}],"links":{"next":""}}`
+
+	runXcodeCloudPaginateFromNext(
+		t,
+		[]string{"xcode-cloud", "xcode-versions", "macos-versions"},
+		firstURL,
+		secondURL,
+		firstBody,
+		secondBody,
+		"ci-xcode-macos-next-1",
+		"ci-xcode-macos-next-2",
+	)
+}
