@@ -36,22 +36,22 @@ func TestPromotedPurchasesValidationErrors(t *testing.T) {
 		},
 		{
 			name:    "promoted-purchases create missing app",
-			args:    []string{"promoted-purchases", "create", "--product-id", "PRODUCT_ID", "--product-type", "SUBSCRIPTION", "--visible-for-all-users"},
+			args:    []string{"promoted-purchases", "create", "--product-id", "PRODUCT_ID", "--product-type", "SUBSCRIPTION", "--visible-for-all-users", "true"},
 			wantErr: "--app is required",
 		},
 		{
 			name:    "promoted-purchases create missing product id",
-			args:    []string{"promoted-purchases", "create", "--app", "APP_ID", "--product-type", "SUBSCRIPTION", "--visible-for-all-users"},
+			args:    []string{"promoted-purchases", "create", "--app", "APP_ID", "--product-type", "SUBSCRIPTION", "--visible-for-all-users", "true"},
 			wantErr: "--product-id is required",
 		},
 		{
 			name:    "promoted-purchases create missing product type",
-			args:    []string{"promoted-purchases", "create", "--app", "APP_ID", "--product-id", "PRODUCT_ID", "--visible-for-all-users"},
+			args:    []string{"promoted-purchases", "create", "--app", "APP_ID", "--product-id", "PRODUCT_ID", "--visible-for-all-users", "true"},
 			wantErr: "--product-type is required",
 		},
 		{
 			name:    "promoted-purchases create invalid product type",
-			args:    []string{"promoted-purchases", "create", "--app", "APP_ID", "--product-id", "PRODUCT_ID", "--product-type", "INVALID", "--visible-for-all-users"},
+			args:    []string{"promoted-purchases", "create", "--app", "APP_ID", "--product-id", "PRODUCT_ID", "--product-type", "INVALID", "--visible-for-all-users", "true"},
 			wantErr: "--product-type must be one of",
 		},
 		{
@@ -61,7 +61,7 @@ func TestPromotedPurchasesValidationErrors(t *testing.T) {
 		},
 		{
 			name:    "promoted-purchases update missing id",
-			args:    []string{"promoted-purchases", "update", "--visible-for-all-users"},
+			args:    []string{"promoted-purchases", "update", "--visible-for-all-users", "true"},
 			wantErr: "--promoted-purchase-id is required",
 		},
 		{

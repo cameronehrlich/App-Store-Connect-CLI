@@ -87,6 +87,9 @@ func TestAgeRatingHelpers(t *testing.T) {
 	if got, err := parseOptionalEnumFlag("--kids-age-band", "five_and_under", kidsAgeBandValues); err != nil || got == nil || *got != "FIVE_AND_UNDER" {
 		t.Fatalf("expected normalized enum value, got %v err=%v", got, err)
 	}
+	if got, err := parseOptionalEnumFlag("--violence-realistic", "infrequent", ageRatingLevelValues); err != nil || got == nil || *got != "INFREQUENT" {
+		t.Fatalf("expected legacy enum value to be accepted, got %v err=%v", got, err)
+	}
 	if _, err := parseOptionalEnumFlag("--kids-age-band", "bad", kidsAgeBandValues); err == nil {
 		t.Fatal("expected enum validation error")
 	}
@@ -102,6 +105,30 @@ func TestAgeRatingHelpers(t *testing.T) {
 		t.Fatal("expected guns-or-other-weapons=FREQUENT_OR_INTENSE")
 	}
 
+	// Override and URL fields parse correctly
+	attrs3, err := buildAgeRatingAttributes(map[string]string{
+		"age-rating-override-v2":        "EIGHTEEN_PLUS",
+		"korea-age-rating-override":     "NINETEEN_PLUS",
+		"developer-age-rating-info-url": "https://example.com/age-rating",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if attrs3.AgeRatingOverrideV2 == nil || *attrs3.AgeRatingOverrideV2 != "EIGHTEEN_PLUS" {
+		t.Fatal("expected age-rating-override-v2=EIGHTEEN_PLUS")
+	}
+	if attrs3.KoreaAgeRatingOverride == nil || *attrs3.KoreaAgeRatingOverride != "NINETEEN_PLUS" {
+		t.Fatal("expected korea-age-rating-override=NINETEEN_PLUS")
+	}
+	if attrs3.DeveloperAgeRatingInfoURL == nil || *attrs3.DeveloperAgeRatingInfoURL != "https://example.com/age-rating" {
+		t.Fatal("expected developer-age-rating-info-url to be parsed")
+	}
+	if _, err := buildAgeRatingAttributes(map[string]string{
+		"developer-age-rating-info-url": "not-a-url",
+	}); err == nil {
+		t.Fatal("expected invalid URL error")
+	}
+
 	// hasAgeRatingUpdates
 	if hasAgeRatingUpdates(asc.AgeRatingDeclarationAttributes{}) {
 		t.Fatal("expected no updates for zero-value attrs")
@@ -113,5 +140,9 @@ func TestAgeRatingHelpers(t *testing.T) {
 	boolVal := false
 	if !hasAgeRatingUpdates(asc.AgeRatingDeclarationAttributes{Advertising: &boolVal}) {
 		t.Fatal("expected updates when one bool attribute is set")
+	}
+	override := "NINE_PLUS"
+	if !hasAgeRatingUpdates(asc.AgeRatingDeclarationAttributes{AgeRatingOverrideV2: &override}) {
+		t.Fatal("expected updates when override attribute is set")
 	}
 }

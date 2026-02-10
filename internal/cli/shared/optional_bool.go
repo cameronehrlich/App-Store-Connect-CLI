@@ -9,6 +9,9 @@ import (
 type OptionalBool struct {
 	set   bool
 	value bool
+	// boolFlag controls whether flag.Parse can accept bare --flag syntax.
+	// When false (default), an explicit value is required (e.g. --flag true).
+	boolFlag bool
 }
 
 func (b *OptionalBool) Set(value string) error {
@@ -26,6 +29,16 @@ func (b *OptionalBool) String() string {
 		return ""
 	}
 	return strconv.FormatBool(b.value)
+}
+
+// IsBoolFlag tells the standard flag parser whether bare --flag is allowed.
+func (b *OptionalBool) IsBoolFlag() bool {
+	return b.boolFlag
+}
+
+// EnableBoolFlag allows bare --flag syntax for this OptionalBool instance.
+func (b *OptionalBool) EnableBoolFlag() {
+	b.boolFlag = true
 }
 
 func (b OptionalBool) IsSet() bool {

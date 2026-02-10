@@ -39,6 +39,18 @@ var (
 	}
 )
 
+type versionLocalizationClient interface {
+	GetAppStoreVersionLocalizations(context.Context, string, ...asc.AppStoreVersionLocalizationsOption) (*asc.AppStoreVersionLocalizationsResponse, error)
+	CreateAppStoreVersionLocalization(context.Context, string, asc.AppStoreVersionLocalizationAttributes) (*asc.AppStoreVersionLocalizationResponse, error)
+	UpdateAppStoreVersionLocalization(context.Context, string, asc.AppStoreVersionLocalizationAttributes) (*asc.AppStoreVersionLocalizationResponse, error)
+}
+
+type appInfoLocalizationClient interface {
+	GetAppInfoLocalizations(context.Context, string, ...asc.AppInfoLocalizationsOption) (*asc.AppInfoLocalizationsResponse, error)
+	CreateAppInfoLocalization(context.Context, string, asc.AppInfoLocalizationAttributes) (*asc.AppInfoLocalizationResponse, error)
+	UpdateAppInfoLocalization(context.Context, string, asc.AppInfoLocalizationAttributes) (*asc.AppInfoLocalizationResponse, error)
+}
+
 func NormalizeLocalizationType(value string) (string, error) {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	switch normalized {
@@ -249,7 +261,7 @@ func ReadLocalizationStrings(inputPath string, locales []string) (map[string]map
 	return values, nil
 }
 
-func UploadVersionLocalizations(ctx context.Context, client *asc.Client, versionID string, valuesByLocale map[string]map[string]string, dryRun bool) ([]asc.LocalizationUploadLocaleResult, error) {
+func UploadVersionLocalizations(ctx context.Context, client versionLocalizationClient, versionID string, valuesByLocale map[string]map[string]string, dryRun bool) ([]asc.LocalizationUploadLocaleResult, error) {
 	validateKeys := buildAllowedKeys(versionLocalizationKeys)
 	for locale, values := range valuesByLocale {
 		if err := validateLocalizationKeys(locale, values, validateKeys); err != nil {
@@ -287,7 +299,7 @@ func UploadVersionLocalizations(ctx context.Context, client *asc.Client, version
 		resp, err := client.UpdateAppStoreVersionLocalization(ctx, existingID, attributes)
 		// If the API rejects whatsNew (e.g. on an initial v1.0 release where
 		// there is no previous version), retry without it and warn the user.
-		if err != nil && attributes.WhatsNew != "" && strings.Contains(err.Error(), "whatsNew") {
+		if err != nil && strings.TrimSpace(attributes.WhatsNew) != "" && isWhatsNewUnsupportedError(err) {
 			fmt.Fprintln(os.Stderr, "Warning: 'whatsNew' cannot be set for this version (initial releases have no What's New section). Retrying without it.")
 			attributes.WhatsNew = ""
 			resp, err = client.UpdateAppStoreVersionLocalization(ctx, existingID, attributes)
@@ -299,7 +311,7 @@ func UploadVersionLocalizations(ctx context.Context, client *asc.Client, version
 	})
 }
 
-func UploadAppInfoLocalizations(ctx context.Context, client *asc.Client, appInfoID string, valuesByLocale map[string]map[string]string, dryRun bool) ([]asc.LocalizationUploadLocaleResult, error) {
+func UploadAppInfoLocalizations(ctx context.Context, client appInfoLocalizationClient, appInfoID string, valuesByLocale map[string]map[string]string, dryRun bool) ([]asc.LocalizationUploadLocaleResult, error) {
 	validateKeys := buildAllowedKeys(appInfoLocalizationKeys)
 	for locale, values := range valuesByLocale {
 		if err := validateLocalizationKeys(locale, values, validateKeys); err != nil {
@@ -340,6 +352,31 @@ func UploadAppInfoLocalizations(ctx context.Context, client *asc.Client, appInfo
 		}
 		return asc.LocalizationUploadLocaleResult{Locale: locale, Action: "update", LocalizationID: resp.Data.ID}, nil
 	})
+}
+
+func isWhatsNewUnsupportedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var apiErr *asc.APIError
+	if errors.As(err, &apiErr) {
+		if containsWhatsNewToken(apiErr.Code) || containsWhatsNewToken(apiErr.Title) || containsWhatsNewToken(apiErr.Detail) {
+			return true
+		}
+	}
+	return containsWhatsNewToken(err.Error())
+}
+
+func containsWhatsNewToken(value string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "" {
+		return false
+	}
+	normalized = strings.ReplaceAll(normalized, "'", "")
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	normalized = strings.ReplaceAll(normalized, "_", "")
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	return strings.Contains(normalized, "whatsnew")
 }
 
 func uploadLocalizationValues(ctx context.Context, valuesByLocale map[string]map[string]string, existing map[string]string, handler func(locale string, values map[string]string, existingID string) (asc.LocalizationUploadLocaleResult, error)) ([]asc.LocalizationUploadLocaleResult, error) {

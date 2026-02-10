@@ -55,7 +55,9 @@ func ageRatingFields(resp *AgeRatingDeclarationResponse) []ageRatingField {
 		// Overrides and metadata
 		{Name: "Kids Age Band", Value: formatOptionalString(attrs.KidsAgeBand)},
 		{Name: "Age Rating Override", Value: formatOptionalString(attrs.AgeRatingOverride)},
+		{Name: "Age Rating Override V2", Value: formatOptionalString(attrs.AgeRatingOverrideV2)},
 		{Name: "Korea Age Rating Override", Value: formatOptionalString(attrs.KoreaAgeRatingOverride)},
+		{Name: "Developer Age Rating Info URL", Value: formatOptionalString(attrs.DeveloperAgeRatingInfoURL)},
 	}
 	return fields
 }

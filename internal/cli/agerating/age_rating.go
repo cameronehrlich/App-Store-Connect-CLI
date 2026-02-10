@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -17,6 +18,32 @@ var ageRatingLevelValues = []string{
 	"NONE",
 	"INFREQUENT_OR_MILD",
 	"FREQUENT_OR_INTENSE",
+	"INFREQUENT",
+	"FREQUENT",
+}
+
+var ageRatingOverrideValues = []string{
+	"NONE",
+	"NINE_PLUS",
+	"THIRTEEN_PLUS",
+	"SIXTEEN_PLUS",
+	"SEVENTEEN_PLUS",
+	"UNRATED",
+}
+
+var ageRatingOverrideV2Values = []string{
+	"NONE",
+	"NINE_PLUS",
+	"THIRTEEN_PLUS",
+	"SIXTEEN_PLUS",
+	"EIGHTEEN_PLUS",
+	"UNRATED",
+}
+
+var koreaAgeRatingOverrideValues = []string{
+	"NONE",
+	"FIFTEEN_PLUS",
+	"NINETEEN_PLUS",
 }
 
 var kidsAgeBandValues = []string{
@@ -141,6 +168,10 @@ func AgeRatingSetCommand() *ffcli.Command {
 
 	// Other
 	kidsAgeBand := fs.String("kids-age-band", "", "Kids age band: FIVE_AND_UNDER, SIX_TO_EIGHT, NINE_TO_ELEVEN")
+	ageRatingOverride := fs.String("age-rating-override", "", "Deprecated age rating override: NONE, NINE_PLUS, THIRTEEN_PLUS, SIXTEEN_PLUS, SEVENTEEN_PLUS, UNRATED")
+	ageRatingOverrideV2 := fs.String("age-rating-override-v2", "", "Age rating override v2: NONE, NINE_PLUS, THIRTEEN_PLUS, SIXTEEN_PLUS, EIGHTEEN_PLUS, UNRATED")
+	koreaAgeRatingOverride := fs.String("korea-age-rating-override", "", "Korea age rating override: NONE, FIFTEEN_PLUS, NINETEEN_PLUS")
+	developerAgeRatingInfoURL := fs.String("developer-age-rating-info-url", "", "Developer age rating information URL")
 
 	output := fs.String("output", shared.DefaultOutputFormat(), "Output format: json (default), table, markdown")
 	pretty := fs.Bool("pretty", false, "Pretty-print JSON output")
@@ -198,7 +229,11 @@ Examples:
 				"violence-realistic":            *violenceRealistic,
 				"violence-realistic-graphic":    *violenceRealisticGraphic,
 				// Other
-				"kids-age-band": *kidsAgeBand,
+				"kids-age-band":                 *kidsAgeBand,
+				"age-rating-override":           *ageRatingOverride,
+				"age-rating-override-v2":        *ageRatingOverrideV2,
+				"korea-age-rating-override":     *koreaAgeRatingOverride,
+				"developer-age-rating-info-url": *developerAgeRatingInfoURL,
 			})
 			if err != nil {
 				return err
@@ -313,6 +348,9 @@ func buildAgeRatingAttributes(values map[string]string) (asc.AgeRatingDeclaratio
 		{"violence-realistic", &attrs.ViolenceRealistic, ageRatingLevelValues},
 		{"violence-realistic-graphic", &attrs.ViolenceRealisticProlongedGraphicOrSadistic, ageRatingLevelValues},
 		{"kids-age-band", &attrs.KidsAgeBand, kidsAgeBandValues},
+		{"age-rating-override", &attrs.AgeRatingOverride, ageRatingOverrideValues},
+		{"age-rating-override-v2", &attrs.AgeRatingOverrideV2, ageRatingOverrideV2Values},
+		{"korea-age-rating-override", &attrs.KoreaAgeRatingOverride, koreaAgeRatingOverrideValues},
 	}
 	for _, f := range enumFields {
 		val, err := parseOptionalEnumFlag("--"+f.flag, values[f.flag], f.allowed)
@@ -320,6 +358,13 @@ func buildAgeRatingAttributes(values map[string]string) (asc.AgeRatingDeclaratio
 			return attrs, err
 		}
 		*f.dest = val
+	}
+
+	if raw := strings.TrimSpace(values["developer-age-rating-info-url"]); raw != "" {
+		if _, err := url.ParseRequestURI(raw); err != nil {
+			return attrs, fmt.Errorf("--developer-age-rating-info-url must be a valid URL")
+		}
+		attrs.DeveloperAgeRatingInfoURL = &raw
 	}
 
 	return attrs, nil
@@ -348,7 +393,11 @@ func hasAgeRatingUpdates(attrs asc.AgeRatingDeclarationAttributes) bool {
 		attrs.ViolenceCartoonOrFantasy != nil ||
 		attrs.ViolenceRealistic != nil ||
 		attrs.ViolenceRealisticProlongedGraphicOrSadistic != nil ||
-		attrs.KidsAgeBand != nil
+		attrs.KidsAgeBand != nil ||
+		attrs.AgeRatingOverride != nil ||
+		attrs.AgeRatingOverrideV2 != nil ||
+		attrs.KoreaAgeRatingOverride != nil ||
+		attrs.DeveloperAgeRatingInfoURL != nil
 }
 
 func parseOptionalEnumFlag(name, raw string, allowed []string) (*string, error) {

@@ -1334,13 +1334,15 @@ func TestPrintTable_AgeRatingDeclaration(t *testing.T) {
 			Type: ResourceTypeAgeRatingDeclarations,
 			ID:   "age-1",
 			Attributes: AgeRatingDeclarationAttributes{
-				Advertising:          boolPtr(false),
-				Gambling:             boolPtr(false),
-				LootBox:              boolPtr(true),
-				UserGeneratedContent: boolPtr(false),
-				GunsOrOtherWeapons:   stringPtr("NONE"),
-				KidsAgeBand:          stringPtr("FIVE_AND_UNDER"),
-				ViolenceRealistic:    stringPtr("NONE"),
+				Advertising:               boolPtr(false),
+				Gambling:                  boolPtr(false),
+				LootBox:                   boolPtr(true),
+				UserGeneratedContent:      boolPtr(false),
+				GunsOrOtherWeapons:        stringPtr("NONE"),
+				KidsAgeBand:               stringPtr("FIVE_AND_UNDER"),
+				ViolenceRealistic:         stringPtr("NONE"),
+				AgeRatingOverrideV2:       stringPtr("THIRTEEN_PLUS"),
+				DeveloperAgeRatingInfoURL: stringPtr("https://example.com/age-rating"),
 			},
 		},
 	}
@@ -1349,7 +1351,18 @@ func TestPrintTable_AgeRatingDeclaration(t *testing.T) {
 		return PrintTable(resp)
 	})
 
-	for _, expected := range []string{"Gambling", "Advertising", "Loot Box", "User-Generated Content", "Guns/Other Weapons", "FIVE_AND_UNDER"} {
+	for _, expected := range []string{
+		"Gambling",
+		"Advertising",
+		"Loot Box",
+		"User-Generated Content",
+		"Guns/Other Weapons",
+		"FIVE_AND_UNDER",
+		"Age Rating Override V2",
+		"THIRTEEN_PLUS",
+		"Developer Age Rating Info URL",
+		"https://example.com/age-rating",
+	} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("expected %q in output, got: %s", expected, output)
 		}
@@ -1365,8 +1378,10 @@ func TestPrintMarkdown_AgeRatingDeclaration(t *testing.T) {
 			Type: ResourceTypeAgeRatingDeclarations,
 			ID:   "age-1",
 			Attributes: AgeRatingDeclarationAttributes{
-				Gambling:    boolPtr(true),
-				KidsAgeBand: stringPtr("SIX_TO_EIGHT"),
+				Gambling:                  boolPtr(true),
+				KidsAgeBand:               stringPtr("SIX_TO_EIGHT"),
+				AgeRatingOverrideV2:       stringPtr("SIXTEEN_PLUS"),
+				DeveloperAgeRatingInfoURL: stringPtr("https://example.com/age-rating"),
 			},
 		},
 	}
@@ -1383,6 +1398,12 @@ func TestPrintMarkdown_AgeRatingDeclaration(t *testing.T) {
 	}
 	if !strings.Contains(output, "SIX_TO_EIGHT") {
 		t.Fatalf("expected kids age band, got: %s", output)
+	}
+	if !strings.Contains(output, "SIXTEEN_PLUS") {
+		t.Fatalf("expected age rating override v2, got: %s", output)
+	}
+	if !strings.Contains(output, "https://example.com/age-rating") {
+		t.Fatalf("expected developer age rating info URL, got: %s", output)
 	}
 }
 

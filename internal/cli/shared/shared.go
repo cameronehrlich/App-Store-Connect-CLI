@@ -74,6 +74,12 @@ var (
 
 // BindRootFlags registers root-level flags that affect shared CLI behavior.
 func BindRootFlags(fs *flag.FlagSet) {
+	// Keep root debug/retry flags ergonomic while command-level OptionalBool
+	// flags continue to require explicit values.
+	retryLog.EnableBoolFlag()
+	debug.EnableBoolFlag()
+	apiDebug.EnableBoolFlag()
+
 	fs.StringVar(&selectedProfile, "profile", "", "Use named authentication profile")
 	fs.BoolVar(&strictAuth, "strict-auth", false, "Fail when credentials are resolved from multiple sources")
 	fs.Var(&retryLog, "retry-log", "Enable retry logging to stderr (overrides ASC_RETRY_LOG/config when set)")
